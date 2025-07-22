@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"text/template"
 )
 
 var (
@@ -21,6 +22,8 @@ type TokenResponse struct {
 }
 
 func main() {
+	var templates = template.Must(template.ParseFiles("templates/index.html"))
+
 	clientID = os.Getenv("HH_CLIENT_ID")
 	clientSecret = os.Getenv("HH_CLIENT_SECRET")
 
@@ -33,7 +36,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("QWEQWEQ"))
+		templates.ExecuteTemplate(w, "index.html", nil)
 	})
 
 	log.Printf("server starting %s://%s:%s", serverHTTP, serverHost, serverPort)
