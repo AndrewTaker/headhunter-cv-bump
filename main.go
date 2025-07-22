@@ -22,21 +22,6 @@ var (
 	sessionManager                                 *scs.SessionManager
 )
 
-const (
-	tokenURL = "https://hh.ru/oauth/token"
-	bumpURL  = "https://api.hh.ru/resumes/%s/publish"
-)
-
-type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-}
-
-type PageData struct {
-	Title      string
-	IsLoggedIn bool
-	Username   string
-}
-
 func main() {
 	var err error
 	db, err = db_init()
