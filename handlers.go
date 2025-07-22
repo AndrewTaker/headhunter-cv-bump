@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -20,7 +19,6 @@ func home(w http.ResponseWriter, r *http.Request) {
 		templates.ExecuteTemplate(w, "base", nil)
 		return
 	}
-	log.Println(resumes)
 	templates.ExecuteTemplate(w, "base", map[string]any{"User": user, "Resumes": resumes})
 }
 
@@ -113,4 +111,31 @@ func callback(w http.ResponseWriter, r *http.Request) {
 	sessionManager.Put(r.Context(), "userID", user.ID)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func toggleResume(w http.ResponseWriter, r *http.Request) {
+	resumeID := r.PathValue("id")
+	userID := sessionManager.GetString(r.Context(), "userID")
+
+	var err error
+
+	if err = r.ParseForm(); err != nil {
+		http.Error(w, "could not parse form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	desiredIsScheduled := r.Form.Has("is_scheduled")
+
+	if err = updateResumeScheduling(db, resumeID, userID, desiredIsScheduled); err != nil {
+		http.Error(w, "could not update resume scheduling in database: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var resume *Resume
+	if resume, err = getResumeByID(db, resumeID, userID); err != nil {
+		http.Error(w, "could not fetch updated resume from database: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	templates.ExecuteTemplate(w, "toggle-switch", resume)
 }

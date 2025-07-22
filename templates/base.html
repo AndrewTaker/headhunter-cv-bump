@@ -6,6 +6,7 @@
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <meta name="color-scheme" content="light dark">
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.green.min.css">
+            <script src="https://unpkg.com/htmx.org@1.9.12"></script>
             <title>Headhunter bump CV</title>
         </head>
         <body class="container">
@@ -20,6 +21,11 @@
                                     <p>{{ .ID }}</p>
                                 </hgroup>
                             </header>
+                            <p>Created: {{ .CreatedAt }}</p>
+                            <p>Updated: {{ .UpdatedAt }}</p>
+                            <footer>
+                                {{ template "toggle-switch" . }}
+                            </footer>
                         </article>
                     {{ end }}
                 {{ end }}

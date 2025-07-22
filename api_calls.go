@@ -32,6 +32,7 @@ type Resume struct {
 	CreatedAt    string `json:"created_at"`
 	UpdatedAt    string `json:"updated_at"`
 	AlternateURL string `json:"alternate_url"`
+	IsScheduled  int
 }
 
 func HHGetToken(client *http.Client, code string) (*Token, error) {

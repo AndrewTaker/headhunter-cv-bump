@@ -81,20 +81,6 @@ func getUserByID(db *sql.DB, userID string) (*User, error) {
 	return &u, nil
 }
 
-func getTokenByCode(db *sql.DB, code string) (*Token, error) {
-	query := `select access_token, refresh_token, expires_in from tokens where code = ?`
-	var t Token
-	if err := db.QueryRow(query, code).Scan(
-		&t.AccessToken,
-		&t.RefreshToken,
-		&t.ExpiresIn,
-	); err != nil {
-		return nil, err
-	}
-
-	return &t, nil
-}
-
 func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) error {
 	query := `
 	insert into tokens (access_token, refresh_token, expires_in, code, user_id) values (?, ?, ?, ?, ?)
@@ -172,4 +158,36 @@ func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
 
 	return resumes, nil
 
+}
+
+func getResumeByID(db *sql.DB, rID, uID string) (*Resume, error) {
+	query := `select id, title, created_at, updated_at, is_scheduled from resumes where id = ? and user_id = ?`
+
+	var r Resume
+	if err := db.QueryRow(query, rID, uID).Scan(
+		&r.ID,
+		&r.Title,
+		&r.CreatedAt,
+		&r.UpdatedAt,
+		&r.IsScheduled,
+	); err != nil {
+		return nil, err
+	}
+
+	return &r, nil
+}
+
+func updateResumeScheduling(db *sql.DB, rID, uID string, isScheduled bool) error {
+	scheduledValue := 0
+	if isScheduled {
+		scheduledValue = 1
+	}
+
+	query := `update resumes set is_scheduled = ? where id = ? and user_id = ?`
+
+	if _, err := db.Exec(query, scheduledValue, rID, uID); err != nil {
+		return err
+	}
+
+	return nil
 }
