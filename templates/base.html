@@ -6,11 +6,24 @@
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <meta name="color-scheme" content="light dark">
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.green.min.css">
-            <title>qwe</title>
+            <title>Headhunter bump CV</title>
         </head>
         <body class="container">
             <header>{{ template "header" . }}</header>
-            <main class="container"></main>
+            <main class="container">
+                {{ if .Resumes }}
+                    {{ range .Resumes }}
+                        <article>
+                            <header>
+                                <hgroup>
+                                    <h3>{{ .Title }}</h3>
+                                    <p>{{ .ID }}</p>
+                                </hgroup>
+                            </header>
+                        </article>
+                    {{ end }}
+                {{ end }}
+            </main>
         </body>
     </html>
 {{ end }}

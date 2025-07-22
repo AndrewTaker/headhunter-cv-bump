@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -20,7 +19,22 @@ type Token struct {
 	ExpiresIn    uint   `json:"expires_in"`
 }
 
-func getToken(client *http.Client, code string) (*Token, error) {
+type User struct {
+	ID         string `json:"id"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	MiddleName string `json:"middle_name"`
+}
+
+type Resume struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+	AlternateURL string `json:"alternate_url"`
+}
+
+func HHGetToken(client *http.Client, code string) (*Token, error) {
 	req, err := http.NewRequest("POST", "https://api.hh.ru/token", nil)
 	if err != nil {
 		return nil, err
@@ -60,12 +74,11 @@ func getToken(client *http.Client, code string) (*Token, error) {
 		return nil, fmt.Errorf("failed to decode token response: %w", err)
 	}
 
-	log.Println(token)
 	return &token, nil
 
 }
 
-func getUser(client *http.Client, t string) (*User, error) {
+func HHGetUser(client *http.Client, t string) (*User, error) {
 	req, err := http.NewRequest("GET", "https://api.hh.ru/me", nil)
 	if err != nil {
 		return nil, err
@@ -91,12 +104,44 @@ func getUser(client *http.Client, t string) (*User, error) {
 		return nil, fmt.Errorf("failed to decode user response: %w", err)
 	}
 
-	log.Println(user)
 	return &user, nil
 
 }
 
-func invalidateToken(client *http.Client, t string) error {
+func HHGetResumes(client *http.Client, t string) ([]Resume, error) {
+	req, err := http.NewRequest("GET", "https://api.hh.ru/resumes/mine", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+t)
+	req.Header.Set("HH-User-Agent", "n0thingg@yandex.ru update-cv")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("bad status code getUser(): %d %s", resp.StatusCode, bodyBytes)
+	}
+
+	// var resumes []Resume
+	type hhResumesResponse struct {
+		Items []Resume `json:"items"`
+	}
+	var hhr hhResumesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&hhr); err != nil {
+		return nil, fmt.Errorf("failed to decode user response: %w", err)
+	}
+
+	return hhr.Items, nil
+}
+
+func HHInvalidateToken(client *http.Client, t string) error {
 	req, err := http.NewRequest("DELETE", "https://api.hh.ru/me", nil)
 	if err != nil {
 		return err

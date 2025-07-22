@@ -1,8 +1,8 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -11,15 +11,17 @@ func home(w http.ResponseWriter, r *http.Request) {
 	u := sessionManager.GetString(r.Context(), "userID")
 	user, err := getUserByID(db, u)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			templates.ExecuteTemplate(w, "base", nil)
-			return
-		}
-		http.Error(w, "could not get user for home page"+err.Error(), http.StatusInternalServerError)
-		templates.ExecuteTemplate(w, "base", map[string]*User{"User": user})
+		templates.ExecuteTemplate(w, "base", nil)
 		return
 	}
-	templates.ExecuteTemplate(w, "base", map[string]*User{"User": user})
+
+	resumes, err := getResumesByUserID(db, u)
+	if err != nil {
+		templates.ExecuteTemplate(w, "base", nil)
+		return
+	}
+	log.Println(resumes)
+	templates.ExecuteTemplate(w, "base", map[string]any{"User": user, "Resumes": resumes})
 }
 
 func page(w http.ResponseWriter, r *http.Request) {
@@ -76,19 +78,19 @@ func callback(w http.ResponseWriter, r *http.Request) {
 		MaxAge: -1,
 	})
 
-	token, err := getToken(client, code)
+	token, err := HHGetToken(client, code)
 	if err != nil {
 		http.Error(w, "could not get token "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	user, err := getUser(client, token.AccessToken)
+	user, err := HHGetUser(client, token.AccessToken)
 	if err != nil {
 		http.Error(w, "could not get user "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err = createUser(db, user); err != nil {
+	if err = createOrUpdateUser(db, user); err != nil {
 		http.Error(w, "could not create user to database "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -98,6 +100,16 @@ func callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resumes, err := HHGetResumes(client, token.AccessToken)
+	if err != nil {
+		http.Error(w, "could not fetch resumes "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err = createOrUpdateResumes(db, resumes, user.ID); err != nil {
+		http.Error(w, "could not create or update resumes to database "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	sessionManager.Put(r.Context(), "userID", user.ID)
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)

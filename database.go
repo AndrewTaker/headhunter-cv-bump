@@ -2,22 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 )
-
-type User struct {
-	ID         string `json:"id"`
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	MiddleName string `json:"middle_name"`
-}
-
-type Resume struct {
-	ID           string `json:"id"`
-	Title        string `json:"title"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
-	AlternateURL string `json:"alternate_url"`
-}
 
 func db_init() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "./hh.db")
@@ -38,7 +24,7 @@ func db_init() (*sql.DB, error) {
 		refresh_token text,
 		expires_in integer,
 		code text unique,
-		user_id text,
+		user_id text unique,
 		
 		foreign key (user_id) references users(id) on delete cascade
 	);
@@ -64,7 +50,7 @@ func db_init() (*sql.DB, error) {
 	return db, nil
 }
 
-func createUser(db *sql.DB, user *User) error {
+func createOrUpdateUser(db *sql.DB, user *User) error {
 	query := `
 	insert into users (id, first_name, last_name, middle_name) values (?, ?, ?, ?)
 	on conflict(id) do update set
@@ -112,11 +98,11 @@ func getTokenByCode(db *sql.DB, code string) (*Token, error) {
 func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) error {
 	query := `
 	insert into tokens (access_token, refresh_token, expires_in, code, user_id) values (?, ?, ?, ?, ?)
-	on conflict(code) do update set
+	on conflict(user_id) do update set
 	access_token = excluded.access_token,
 	refresh_token = excluded.refresh_token,
 	expires_in = excluded.expires_in,
-	user_id = excluded.user_id
+	code = excluded.code
 	`
 	_, err := db.Exec(query, tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresIn, code, userID)
 	if err != nil {
@@ -125,16 +111,65 @@ func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) 
 
 	return nil
 }
-func createResumes(db *sql.DB, resumes []*Resume, usedID string) error {
-	query := `insert into resumes (id, title, created_at, updated_at, user_id) values `
-	for i := 0; i < len(resumes); i++ {
-		query += "(?, ?, ?, ?, ?)\n"
-	}
 
-	_, err := db.Exec(query)
+func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
+	query := `
+	insert into resumes (id, title, created_at, updated_at, user_id) values (?, ?, ?, ?, ?)
+	on conflict(id) do update set
+	title = excluded.title,
+	created_at = excluded.created_at,
+	updated_at = excluded.updated_at,
+	user_id = excluded.user_id;
+	`
+	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, resume := range resumes {
+		_, err := stmt.Exec(
+			resume.ID,
+			resume.Title,
+			resume.CreatedAt,
+			resume.UpdatedAt,
+			userID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to execute statement for resume ID %s: %w", resume.ID, err)
+		}
+	}
+	tx.Commit()
 
 	return nil
+}
+
+func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
+	query := "select id, title, created_at, updated_at from resumes where user_id = ?"
+	rows, err := db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var resumes []Resume
+	for rows.Next() {
+		var r Resume
+		if err := rows.Scan(&r.ID, &r.Title, &r.CreatedAt, &r.UpdatedAt); err != nil {
+			return nil, err
+		}
+		resumes = append(resumes, r)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return resumes, nil
+
 }
