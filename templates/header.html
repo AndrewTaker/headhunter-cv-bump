@@ -1,0 +1,20 @@
+{{ define "header" }}
+    <nav>
+        <ul>
+        {{ if .User}}
+           <li>
+                <hgroup>
+                    <h3>{{ .User.LastName }} {{ .User.FirstName }} {{ .User.MiddleName }}</h3>
+                    <small>{{ .User.ID }}</small>
+                </hgroup>
+            </li>
+        {{ else }}
+            <li>not logged in</li>
+        {{ end }}
+        </ul>
+        <ul>
+            <li><a href="/">home</a></li>
+            <li><a href="/login">login</a></li>
+        </ul>
+    </nav>
+{{ end }}
