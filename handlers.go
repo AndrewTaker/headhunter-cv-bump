@@ -141,3 +141,27 @@ func toggleResume(w http.ResponseWriter, r *http.Request) {
 
 	templates.ExecuteTemplate(w, "toggle-switch", resume)
 }
+
+func updateResumesOnDemand(w http.ResponseWriter, r *http.Request) {
+	var resumes []Resume
+	var err error
+
+	userID := sessionManager.GetString(r.Context(), "userID")
+	token, err := getTokenByUserID(db, userID)
+	if err != nil {
+		http.Error(w, "could not get token by user id from database: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if resumes, err = HHGetResumes(client, token.AccessToken); err != nil {
+		http.Error(w, "could not get resumes from hh: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = createOrUpdateResumes(db, resumes, userID); err != nil {
+		http.Error(w, "could not create or update resumes: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
