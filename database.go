@@ -197,3 +197,18 @@ func updateResumeScheduling(db *sql.DB, rID, uID string, isScheduled bool) error
 
 	return nil
 }
+
+func getTokenByUserID(db *sql.DB, uID string) (*Token, error) {
+	query := `select access_token, refresh_token, expires_in from tokens where user_id = ?`
+
+	var t Token
+	if err := db.QueryRow(query, uID).Scan(
+		&t.AccessToken,
+		&t.RefreshToken,
+		&t.ExpiresIn,
+	); err != nil {
+		return nil, err
+	}
+
+	return &t, nil
+}
