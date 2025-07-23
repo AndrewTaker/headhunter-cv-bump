@@ -163,7 +163,6 @@ func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
 	}
 
 	return resumes, nil
-
 }
 
 func getResumeByID(db *sql.DB, rID, uID string) (*Resume, error) {
@@ -211,4 +210,61 @@ func getTokenByUserID(db *sql.DB, uID string) (*Token, error) {
 	}
 
 	return &t, nil
+}
+func deleteResumes(db *sql.DB, resumes []Resume, userID string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`delete from resumes where id = ? and user_id = ?`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, resume := range resumes {
+		_, err := stmt.Exec(resume.ID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to execute statement for resume ID %s: %w", resume.ID, err)
+		}
+	}
+	tx.Commit()
+
+	return nil
+}
+
+func reconcileResumes(db *sql.DB, hhr, dbr []Resume, userID string) error {
+	var rDelete, rCreateOrUppdate []Resume
+
+	dbmap := make(map[string]Resume, len(dbr))
+	for _, r := range dbr {
+		dbmap[r.ID] = r
+	}
+
+	hhmap := make(map[string]Resume, len(hhr))
+	for _, r := range hhr {
+		hhmap[r.ID] = r
+
+		if _, ok := dbmap[r.ID]; !ok {
+			rCreateOrUppdate = append(rCreateOrUppdate, r)
+		}
+	}
+
+	for _, r := range dbr {
+		if _, ok := hhmap[r.ID]; !ok {
+			rDelete = append(rDelete, r)
+		}
+	}
+
+	if err := deleteResumes(db, rDelete, userID); err != nil {
+		return err
+	}
+
+	if err := createOrUpdateResumes(db, rCreateOrUppdate, userID); err != nil {
+		return err
+	}
+
+	return nil
 }
