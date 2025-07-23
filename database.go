@@ -2,8 +2,39 @@ package main
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
+	"log"
+	"time"
 )
+
+func (hht *HHTime) Scan(value any) error {
+	switch v := value.(type) {
+	case string:
+		t, err := time.Parse(timeLayout, v)
+		if err != nil {
+			return err
+		}
+		*hht = HHTime(t)
+		return nil
+	case []byte:
+		t, err := time.Parse(timeLayout, string(v))
+		if err != nil {
+			return err
+		}
+		*hht = HHTime(t)
+		return nil
+	case time.Time:
+		*hht = HHTime(v)
+		return nil
+	default:
+		return fmt.Errorf("cannot scan type %T into HHTime", v)
+	}
+}
+
+func (hht HHTime) Value() (driver.Value, error) {
+	return time.Time(hht), nil
+}
 
 func db_init() (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "./hh.db")
@@ -99,6 +130,7 @@ func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) 
 }
 
 func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
+	log.Println("createOrUpdateResumes tx start")
 	query := `
 	insert into resumes (id, title, created_at, updated_at, user_id) values (?, ?, ?, ?, ?)
 	on conflict(id) do update set
@@ -132,6 +164,7 @@ func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
 		}
 	}
 	tx.Commit()
+	log.Println("createOrUpdateResumes tx end")
 
 	return nil
 }
@@ -212,6 +245,7 @@ func getTokenByUserID(db *sql.DB, uID string) (*Token, error) {
 	return &t, nil
 }
 func deleteResumes(db *sql.DB, resumes []Resume, userID string) error {
+	log.Println("deleteResumes tx start")
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -231,6 +265,7 @@ func deleteResumes(db *sql.DB, resumes []Resume, userID string) error {
 		}
 	}
 	tx.Commit()
+	log.Println("deleteResumes tx end")
 
 	return nil
 }

@@ -5,7 +5,32 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 )
+
+// we have time string without offset
+// because fuck you that's why
+type HHTime time.Time
+
+func (hht *HHTime) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), `"`)
+	t, err := time.Parse("2006-01-02T15:04:05-0700", s)
+	if err != nil {
+		return err
+	}
+	*hht = HHTime(t)
+	return nil
+}
+
+func (hht HHTime) MarshalJSON() ([]byte, error) {
+	t := time.Time(hht)
+	return []byte(`"` + t.Format(timeLayout) + `"`), nil
+}
+
+func (t HHTime) Format(layout string) string {
+	return time.Time(t).Format(time.RFC1123)
+}
 
 type HHError struct {
 	Error            string `json:"error"`
@@ -29,8 +54,8 @@ type User struct {
 type Resume struct {
 	ID           string `json:"id"`
 	Title        string `json:"title"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+	CreatedAt    HHTime `json:"created_at"`
+	UpdatedAt    HHTime `json:"updated_at"`
 	AlternateURL string `json:"alternate_url"`
 	IsScheduled  int
 }

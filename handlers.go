@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 )
@@ -10,12 +11,14 @@ func home(w http.ResponseWriter, r *http.Request) {
 	u := sessionManager.GetString(r.Context(), "userID")
 	user, err := getUserByID(db, u)
 	if err != nil {
+		log.Println("/home " + err.Error())
 		templates.ExecuteTemplate(w, "base", nil)
 		return
 	}
 
 	resumes, err := getResumesByUserID(db, u)
 	if err != nil {
+		log.Println("/home " + err.Error())
 		templates.ExecuteTemplate(w, "base", nil)
 		return
 	}

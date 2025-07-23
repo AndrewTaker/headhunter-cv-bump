@@ -13,6 +13,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+const timeLayout = "2006-01-02 15:04:05-07:00"
+
 var (
 	clientID, clientSecret, refreshToken, resumeID string
 	serverPort, serverHost, serverHTTP             string
@@ -37,14 +39,19 @@ func main() {
 	sessionManager.Store = memstore.New()
 
 	client = &http.Client{Timeout: 10 * time.Second}
-	templates = template.Must(template.New("base").ParseFiles(
-		"templates/base.html",
-		"templates/header.html",
-		"templates/index.html",
-		"templates/page.html",
-		"templates/toggle-switch.html",
-	))
-
+	templates = template.Must(
+		template.New("base").
+			Funcs(template.FuncMap{
+				"formatTime": func(t HHTime) string {
+					return t.Format(timeLayout)
+				},
+			}).
+			ParseFiles(
+				"templates/base.html",
+				"templates/header.html",
+				"templates/toggle-switch.html",
+			),
+	)
 	clientID = os.Getenv("HH_CLIENT_ID")
 	clientSecret = os.Getenv("HH_CLIENT_SECRET")
 

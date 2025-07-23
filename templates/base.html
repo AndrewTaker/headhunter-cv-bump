@@ -21,11 +21,9 @@
                                     <p>{{ .ID }}</p>
                                 </hgroup>
                             </header>
-                            <p>Created: {{ .CreatedAt }}</p>
-                            <p>Updated: {{ .UpdatedAt }}</p>
-                            <footer>
-                                {{ template "toggle-switch" . }}
-                            </footer>
+                            <p>{{ .CreatedAt | formatTime }}</p>
+                            <p>{{ .UpdatedAt | formatTime }}</p>
+                            <footer>{{ template "toggle-switch" . }}</footer>
                         </article>
                     {{ end }}
                 {{ end }}
