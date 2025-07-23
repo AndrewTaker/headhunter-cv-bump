@@ -137,7 +137,7 @@ func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
 }
 
 func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
-	query := "select id, title, created_at, updated_at from resumes where user_id = ?"
+	query := "select id, title, created_at, updated_at, is_scheduled from resumes where user_id = ?"
 	rows, err := db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,13 @@ func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
 	var resumes []Resume
 	for rows.Next() {
 		var r Resume
-		if err := rows.Scan(&r.ID, &r.Title, &r.CreatedAt, &r.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&r.ID,
+			&r.Title,
+			&r.CreatedAt,
+			&r.UpdatedAt,
+			&r.IsScheduled,
+		); err != nil {
 			return nil, err
 		}
 		resumes = append(resumes, r)

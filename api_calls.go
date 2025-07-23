@@ -130,7 +130,6 @@ func HHGetResumes(client *http.Client, t string) ([]Resume, error) {
 		return nil, fmt.Errorf("bad status code getUser(): %d %s", resp.StatusCode, bodyBytes)
 	}
 
-	// var resumes []Resume
 	type hhResumesResponse struct {
 		Items []Resume `json:"items"`
 	}
