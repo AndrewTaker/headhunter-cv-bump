@@ -40,7 +40,6 @@ func main() {
 	templates = template.Must(template.New("base").ParseFiles(
 		"templates/base.html",
 		"templates/header.html",
-		"templates/footer.html",
 		"templates/index.html",
 		"templates/page.html",
 		"templates/toggle-switch.html",

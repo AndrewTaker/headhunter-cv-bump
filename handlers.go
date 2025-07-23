@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -137,7 +136,6 @@ func toggleResume(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not fetch updated resume from database: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Println(resume)
 
 	templates.ExecuteTemplate(w, "toggle-switch", resume)
 }
