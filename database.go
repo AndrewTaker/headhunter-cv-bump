@@ -132,9 +132,10 @@ func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) 
 func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
 	log.Println("createOrUpdateResumes tx start")
 	query := `
-	insert into resumes (id, title, created_at, updated_at, user_id) values (?, ?, ?, ?, ?)
+	insert into resumes (id, title, alternate_url, created_at, updated_at, user_id) values (?, ?, ?, ?, ?, ?)
 	on conflict(id) do update set
 	title = excluded.title,
+	alternate_url = excluded.alternate_url,
 	created_at = excluded.created_at,
 	updated_at = excluded.updated_at,
 	user_id = excluded.user_id;
@@ -155,6 +156,7 @@ func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
 		_, err := stmt.Exec(
 			resume.ID,
 			resume.Title,
+			resume.AlternateURL,
 			resume.CreatedAt,
 			resume.UpdatedAt,
 			userID,
@@ -170,7 +172,7 @@ func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
 }
 
 func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
-	query := "select id, title, created_at, updated_at, is_scheduled from resumes where user_id = ?"
+	query := "select id, title, alternate_url, created_at, updated_at, is_scheduled from resumes where user_id = ?"
 	rows, err := db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -182,6 +184,7 @@ func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
 		if err := rows.Scan(
 			&r.ID,
 			&r.Title,
+			&r.AlternateURL,
 			&r.CreatedAt,
 			&r.UpdatedAt,
 			&r.IsScheduled,

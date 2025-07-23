@@ -49,6 +49,7 @@ func main() {
 			ParseFiles(
 				"templates/base.html",
 				"templates/header.html",
+				"templates/info.html",
 				"templates/toggle-switch.html",
 			),
 	)
