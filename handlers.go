@@ -143,7 +143,7 @@ func toggleResume(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateResumesOnDemand(w http.ResponseWriter, r *http.Request) {
-	var resumes []Resume
+	var hhr, dbr []Resume
 	var err error
 
 	userID := sessionManager.GetString(r.Context(), "userID")
@@ -153,13 +153,18 @@ func updateResumesOnDemand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if resumes, err = HHGetResumes(client, token.AccessToken); err != nil {
+	if hhr, err = HHGetResumes(client, token.AccessToken); err != nil {
 		http.Error(w, "could not get resumes from hh: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err = createOrUpdateResumes(db, resumes, userID); err != nil {
-		http.Error(w, "could not create or update resumes: "+err.Error(), http.StatusInternalServerError)
+	if dbr, err = getResumesByUserID(db, userID); err != nil {
+		http.Error(w, "could not get resumes by user_id: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err = reconcileResumes(db, hhr, dbr, userID); err != nil {
+		http.Error(w, "could not reconcile resumes: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
