@@ -50,6 +50,7 @@ func main() {
 				"templates/base.html",
 				"templates/header.html",
 				"templates/info.html",
+				"templates/modal.html",
 				"templates/toggle-switch.html",
 			),
 	)
@@ -69,6 +70,8 @@ func main() {
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/auth/callback", callback)
 	http.HandleFunc("/get-resumes", updateResumesOnDemand)
+	http.HandleFunc("/open-modal", openModal)
+	http.HandleFunc("/close-modal", closeModal)
 	http.HandleFunc("POST /toggle-schedule/{id}", toggleResume)
 
 	log.Printf("server starting %s://%s:%s", serverHTTP, serverHost, serverPort)

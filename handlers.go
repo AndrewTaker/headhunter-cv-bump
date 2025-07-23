@@ -171,3 +171,11 @@ func updateResumesOnDemand(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
+
+func openModal(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "modal", nil)
+}
+
+func closeModal(w http.ResponseWriter, r *http.Request) {
+	return
+}
