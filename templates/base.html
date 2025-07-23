@@ -16,16 +16,16 @@
                     {{ range .Resumes }}
                         <article>
                             <header>
-                                <hgroup>
-                                    <h3>{{ .Title }}</h3>
-                                    <p>{{ .ID }}</p>
-                                </hgroup>
+                                <h2>{{ .Title }}</h2>
+                                <p><a href="{{ .AlternateURL }}" class="secondary" target="_blank">{{ .AlternateURL }}</a></p>
                             </header>
-                            <p>{{ .CreatedAt | formatTime }}</p>
-                            <p>{{ .UpdatedAt | formatTime }}</p>
+                            <p>created at: {{ .CreatedAt | formatTime }}</p>
+                            <p>updated at: {{ .UpdatedAt | formatTime }}</p>
                             <footer>{{ template "toggle-switch" . }}</footer>
                         </article>
                     {{ end }}
+                {{ else }}
+                    {{ template "info" . }}
                 {{ end }}
             </main>
         </body>
