@@ -61,6 +61,7 @@ func main() {
 	http.HandleFunc("/page", page)
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/auth/callback", callback)
+	http.HandleFunc("/get-resumes", updateResumesOnDemand)
 	http.HandleFunc("POST /toggle-schedule/{id}", toggleResume)
 
 	log.Printf("server starting %s://%s:%s", serverHTTP, serverHost, serverPort)
