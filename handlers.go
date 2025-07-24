@@ -88,11 +88,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	redirectURI := fmt.Sprintf("%s://%s:%s/auth/callback", serverHTTP, serverHost, serverPort)
-
 	url := fmt.Sprintf(
 		"https://hh.ru/oauth/authorize?response_type=%s&client_id=%s&state=%s&redirect_uri=%s",
-		"code", clientID, state, redirectURI,
+		"code", clientID, state, redirectURL,
 	)
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
