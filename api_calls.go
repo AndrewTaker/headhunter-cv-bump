@@ -18,6 +18,7 @@ type Endpoint struct {
 }
 
 type HeadHunter struct {
+	Client    *http.Client
 	Oauth     *oauth2.Config
 	Headers   map[string]string
 	Endpoints Endpoint
@@ -90,61 +91,22 @@ type Resume struct {
 	IsScheduled  int
 }
 
-func HHGetToken(client *http.Client, code string) (*Token, error) {
-	req, err := http.NewRequest("POST", "https://api.hh.ru/token", nil)
-	if err != nil {
-		return nil, err
+func (hh *HeadHunter) ApplyHeaders(r *http.Request) {
+	for k, v := range hh.Headers {
+		r.Header.Set(k, v)
 	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("HH-User-Agent", "n0thingg@yandex.ru update-cv")
-
-	q := req.URL.Query()
-	q.Add("client_id", clientID)
-	q.Add("client_secret", clientSecret)
-	q.Add("code", code)
-	q.Add("grant_type", "authorization_code")
-	q.Add("redirect_uri", "http://localhost:44444/auth/callback")
-	req.URL.RawQuery = q.Encode()
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		var hherror HHError
-		if err = json.NewDecoder(resp.Body).Decode(&hherror); err != nil {
-			return nil, fmt.Errorf("failed to decode nested token response: %w", err)
-		}
-		if hherror.Error == "invalid_grant" && hherror.ErrorDescription == "code has already been used" {
-			return nil, fmt.Errorf("invalud grant, returning")
-		}
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("bad status code getToken(): %d %s", resp.StatusCode, bodyBytes)
-	}
-
-	var token Token
-	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
-		return nil, fmt.Errorf("failed to decode token response: %w", err)
-	}
-
-	return &token, nil
-
 }
 
-func HHGetUser(client *http.Client, t string) (*User, error) {
-	req, err := http.NewRequest("GET", "https://api.hh.ru/me", nil)
+func (hh *HeadHunter) GetUser(at string) (*User, error) {
+	req, err := http.NewRequest(http.MethodGet, hh.Endpoints.Me, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+t)
-	req.Header.Set("HH-User-Agent", "n0thingg@yandex.ru update-cv")
+	hh.ApplyHeaders(req)
 
-	resp, err := client.Do(req)
+	// resp, err := hh.Oauth.Client(req.Context())
 	if err != nil {
 		return nil, err
 	}
