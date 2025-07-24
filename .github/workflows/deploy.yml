@@ -19,7 +19,7 @@ jobs:
 
       - name: Build binary
         run: |
-          GOOS=linux GOARCH=amd64 go build -o app .
+          GOOS=linux GOARCH=amd64 go build -o hhcv .
 
       - name: Upload binary and templates
         uses: appleboy/scp-action@v0.1.7
@@ -39,4 +39,4 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            systemctl restart my-go-app.service
+            sudo systemctl restart hhcv.service
