@@ -129,7 +129,12 @@ func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) 
 	expires_in = excluded.expires_in,
 	code = excluded.code
 	`
-	_, err := db.Exec(query, tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresIn, code, userID)
+	eat, ert, err := tokens.encrypt()
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(query, eat, ert, tokens.ExpiresIn, code, userID)
 	if err != nil {
 		return err
 	}
@@ -259,6 +264,10 @@ func getTokenByUserID(db *sql.DB, uID string) (*Token, error) {
 			return &Token{}, err
 		}
 		return nil, err
+	}
+
+	if err := t.decrypt(); err != nil {
+		return &Token{}, nil
 	}
 
 	return &t, nil

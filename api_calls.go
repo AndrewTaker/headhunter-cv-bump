@@ -46,6 +46,40 @@ type Token struct {
 	ExpiresIn    uint   `json:"expires_in"`
 }
 
+func (t *Token) encrypt() (string, string, error) {
+	var at, rt string
+	var err error
+
+	if at, err = Encrypt(t.AccessToken); err != nil {
+		return "", "", err
+	}
+
+	if rt, err = Encrypt(t.RefreshToken); err != nil {
+		return "", "", err
+	}
+
+	return at, rt, nil
+}
+
+func (t *Token) decrypt() error {
+	var at, rt string
+	var err error
+
+	if at, err = Decrypt(t.AccessToken); err != nil {
+		return err
+	}
+
+	if rt, err = Decrypt(t.RefreshToken); err != nil {
+		return err
+	}
+
+	t.AccessToken = at
+	t.RefreshToken = rt
+
+	return nil
+
+}
+
 type User struct {
 	ID         string `json:"id"`
 	FirstName  string `json:"first_name"`

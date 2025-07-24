@@ -21,7 +21,7 @@ func GenerateState(length int) (string, error) {
 }
 
 func Encrypt(plaintext string) (string, error) {
-	block, err := aes.NewCipher([]byte(os.Getenv("ENCRYPTION_TOKEN")))
+	block, err := aes.NewCipher([]byte(os.Getenv("ENCRYPTION_KEY")))
 	if err != nil {
 		return "", fmt.Errorf("could not create cipher block: %w", err)
 	}
@@ -46,7 +46,7 @@ func Decrypt(encryptedString string) (string, error) {
 		return "", fmt.Errorf("could not decode base64: %w", err)
 	}
 
-	block, err := aes.NewCipher([]byte(os.Getenv("ENCRYPTION_TOKEN")))
+	block, err := aes.NewCipher([]byte(os.Getenv("ENCRYPTION_KEY")))
 	if err != nil {
 		return "", fmt.Errorf("could not create cipher block: %w", err)
 	}
