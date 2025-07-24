@@ -16,12 +16,12 @@ import (
 const timeLayout = "2006-01-02 15:04:05-07:00"
 
 var (
-	clientID, clientSecret, refreshToken, resumeID string
-	serverPort, serverHost, serverHTTP             string
-	templates                                      *template.Template
-	client                                         *http.Client
-	db                                             *sql.DB
-	sessionManager                                 *scs.SessionManager
+	clientID, clientSecret, resumeID   string
+	serverPort, serverHost, serverHTTP string
+	templates                          *template.Template
+	client                             *http.Client
+	db                                 *sql.DB
+	sessionManager                     *scs.SessionManager
 )
 
 func main() {
