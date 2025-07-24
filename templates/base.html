@@ -12,6 +12,22 @@
         </head>
         <body class="container">
             <header>{{ template "header" . }}</header>
+            {{ if .Notification }}
+                <article
+                    hx-ext="remove-me"
+                    remove-me="2s"
+                    style="background-color: green;"
+                >{{ .Notification }}</article>
+            {{ end }}
+
+            {{ if .Error }}
+                <article
+                    hx-ext="remove-me"
+                    remove-me="2s"
+                    style="background-color: red;"
+                >{{ .Error }}</article>
+            {{ end }}
+
             <main class="container">
                 {{ if .Resumes }}
                     {{ range .Resumes }}
@@ -36,7 +52,6 @@
                     {{ template "info" . }}
                 {{ end }}
                 <div id="modal"></div>
-                <div id="error"></div>
             </main>
         </body>
     </html>

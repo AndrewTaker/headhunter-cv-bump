@@ -66,8 +66,9 @@ func main() {
 	}
 
 	http.HandleFunc("/", home)
-	http.HandleFunc("/page", page)
 	http.HandleFunc("/login", login)
+	http.HandleFunc("/logout", logout)
+	http.HandleFunc("/invalidate", invalidateUserData)
 	http.HandleFunc("/auth/callback", callback)
 	http.HandleFunc("/get-resumes", updateResumesOnDemand)
 	http.HandleFunc("/open-modal", openModal)

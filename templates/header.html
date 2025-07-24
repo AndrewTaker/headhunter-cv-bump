@@ -1,7 +1,7 @@
 {{ define "header" }}
 <nav>
     <ul>
-        {{ if .User}}
+        {{ if .IsLoggedIn}}
             <li>
                 <strong>{{ .User.LastName }} {{ .User.FirstName }}</strong>
                 <small>{{ .User.ID }}</small>
@@ -10,18 +10,18 @@
     </ul>
     <ul>
         <li><a href="/">home</a></li>
+        <li><a 
+            href="#"
+            hx-get="/open-modal"
+            hx-target="#modal"
+            hx-trigger="click"
+        >remove my data</a>
+        </li>
         {{ if.User }}
             <li><a href="/logout">logout<a></li>
             <li><a href="/get-resumes">update resumes</a></li>
         {{ else }}
             <li><a href="/login">login</a></li>
-            <li><a 
-                href="#"
-                hx-get="/open-modal"
-                hx-target="#modal"
-                hx-trigger="click"
-            >remove my data</a>
-            </li>
         {{ end }}
     </ul>
 </nav>

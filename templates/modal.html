@@ -5,15 +5,12 @@
                 <button
                     type="button"
                     aria-label="Close"
-                    rel="prev"
                     class="secondary"
                     hx-get="/close-modal"
                     hx-target="#modal"
                     hx-swap="innerHTML"
                 ></button>
-                <p>
-                    <h2>Confirm you want to remove your data</h2>
-                </p>
+                <h2>Confirm you want to remove your data</h2>
             </header>
             <p>
                 You are about to remove all data associated with your profile.
@@ -21,7 +18,12 @@
                 In case you reconsider - just login via HeadHunter again.
             </p>
             <footer>
-                <a href="/invalidate" type="button" class="secondary">Sure, delete</button>
+                <a
+                    hx-post="/invalidate"
+                    hx-target="body"
+                    hx-swap="innerHTML"
+                    role="button"
+                >Sure, delete</a>
             </footer>
         </article>
     </dialog>

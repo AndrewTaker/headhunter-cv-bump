@@ -42,6 +42,11 @@ func db_init() (*sql.DB, error) {
 		return nil, err
 	}
 
+	_, err = db.Exec("PRAGMA foreign_keys = ON")
+	if err != nil {
+		return nil, err
+	}
+
 	tables := `
 	create table if not exists users (
 		id text primary key,
@@ -106,6 +111,9 @@ func getUserByID(db *sql.DB, userID string) (*User, error) {
 		&u.LastName,
 		&u.MiddleName,
 	); err != nil {
+		if err == sql.ErrNoRows {
+			return &User{}, nil
+		}
 		return nil, err
 	}
 
@@ -195,7 +203,11 @@ func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return []Resume{}, err
+	}
+
+	if err == sql.ErrNoRows {
+		return []Resume{}, nil
 	}
 
 	return resumes, nil
@@ -212,6 +224,9 @@ func getResumeByID(db *sql.DB, rID, uID string) (*Resume, error) {
 		&r.UpdatedAt,
 		&r.IsScheduled,
 	); err != nil {
+		if err == sql.ErrNoRows {
+			return &Resume{}, err
+		}
 		return nil, err
 	}
 
@@ -242,6 +257,9 @@ func getTokenByUserID(db *sql.DB, uID string) (*Token, error) {
 		&t.RefreshToken,
 		&t.ExpiresIn,
 	); err != nil {
+		if err == sql.ErrNoRows {
+			return &Token{}, err
+		}
 		return nil, err
 	}
 
@@ -301,6 +319,16 @@ func reconcileResumes(db *sql.DB, hhr, dbr []Resume, userID string) error {
 	}
 
 	if err := createOrUpdateResumes(db, rCreateOrUppdate, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func deleteUserByID(db *sql.DB, uID string) error {
+	query := `delete from users where id = ?`
+
+	if _, err := db.Exec(query, uID); err != nil {
 		return err
 	}
 

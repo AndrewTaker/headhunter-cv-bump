@@ -11,7 +11,10 @@
             hx-swap="outerHTML"
             hx-trigger="change"
         />
-        Set up for bumping
+        Set up for bumping 
+    <span hx-swap="innerHTML" id="feedback-{{.ID}}" hx-ext="remove-me" remove-me="1s">
+        {{ if eq .IsScheduled 1}}✅ Added{{ else }}❌ Removed{{ end }}
+    </span>
     </label>
 </div>
 {{ end }}

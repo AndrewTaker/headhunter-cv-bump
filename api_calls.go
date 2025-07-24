@@ -167,7 +167,7 @@ func HHGetResumes(client *http.Client, t string) ([]Resume, error) {
 }
 
 func HHInvalidateToken(client *http.Client, t string) error {
-	req, err := http.NewRequest("DELETE", "https://api.hh.ru/me", nil)
+	req, err := http.NewRequest("DELETE", "https://api.hh.ru/oauth/token", nil)
 	if err != nil {
 		return err
 	}
