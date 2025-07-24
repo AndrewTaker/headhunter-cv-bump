@@ -22,13 +22,18 @@ var (
 	client                                         *http.Client
 	db                                             *sql.DB
 	sessionManager                                 *scs.SessionManager
+	IsSecure, IsHttpOnly                           bool
 )
 
 func main() {
 	var err error
-	db, err = db_init()
+	db, err = NewDatabase()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if os.Getenv("STAGE") == "prod" {
+		IsSecure, IsHttpOnly = true, true
 	}
 
 	sessionManager = scs.New()
@@ -61,15 +66,14 @@ func main() {
 	serverHost = os.Args[2]
 	serverPort = os.Args[3]
 
-	if clientID == "" || clientSecret == "" {
-		log.Fatal("no credentials provided")
-	}
-
+	hh := NewHeadHunter()
+	db, _ := NewDatabase()
+	handler := NewHandler(hh, db)
 	http.HandleFunc("/", home)
-	http.HandleFunc("/login", login)
+	http.HandleFunc("/login", handler.login)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/invalidate", invalidateUserData)
-	http.HandleFunc("/auth/callback", callback)
+	http.HandleFunc("/auth/callback", handler.callback)
 	http.HandleFunc("/get-resumes", updateResumesOnDemand)
 	http.HandleFunc("/open-modal", openModal)
 	http.HandleFunc("/close-modal", closeModal)

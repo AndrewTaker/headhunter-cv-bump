@@ -2,3 +2,5 @@ scripts/
 creds/
 *.db
 *.json
+*.sh
+bin/hh

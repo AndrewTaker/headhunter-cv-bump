@@ -5,8 +5,15 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"log"
+	"os"
 	"time"
+
+	"golang.org/x/oauth2"
 )
+
+type DB struct {
+	*sql.DB
+}
 
 func (hht *HHTime) Scan(value any) error {
 	switch v := value.(type) {
@@ -36,8 +43,8 @@ func (hht HHTime) Value() (driver.Value, error) {
 	return time.Time(hht), nil
 }
 
-func db_init() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "./hh.db")
+func NewDatabase() (*DB, error) {
+	db, err := sql.Open("sqlite3", os.Getenv("DATABASE_NAME"))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +90,7 @@ func db_init() (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	return &DB{}, nil
 }
 
 func createOrUpdateUser(db *sql.DB, user *User) error {
@@ -120,7 +127,7 @@ func getUserByID(db *sql.DB, userID string) (*User, error) {
 	return &u, nil
 }
 
-func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) error {
+func createOrUpdateTokens(db *sql.DB, tokens *oauth2.Token, code string, userID string) error {
 	query := `
 	insert into tokens (access_token, refresh_token, expires_in, code, user_id) values (?, ?, ?, ?, ?)
 	on conflict(user_id) do update set

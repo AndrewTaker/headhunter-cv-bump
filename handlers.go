@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
+	"os"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
 type PageData struct {
@@ -16,7 +19,14 @@ type PageData struct {
 
 	IsLoggedIn bool
 }
+type Handler struct {
+	HH *HeadHunter
+	DB *DB
+}
 
+func NewHandler(hh *HeadHunter, db *DB) *Handler {
+	return &Handler{HH: hh, DB: db}
+}
 func home(w http.ResponseWriter, r *http.Request) {
 	data := PageData{
 		IsLoggedIn: false,
@@ -70,60 +80,60 @@ func home(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	state, err := GenerateState(64)
 	if err != nil {
 		http.Error(w, "could not generate state string", http.StatusInternalServerError)
 		return
 	}
-
 	http.SetCookie(w, &http.Cookie{
-		Name:    "auth_state",
-		Value:   state,
-		Expires: time.Now().Add(5 * time.Minute),
-		Path:    "/",
-		// HttpOnly: true, // Optional: prevents client-side script access
-		// Secure:   true, // Optional: only send over HTTPS
-		// SameSite: http.SameSiteLaxMode, // Optional: prevents CSRF
+		Name:     os.Getenv("OAUTH_STATE"),
+		Value:    state,
+		Expires:  time.Now().Add(5 * time.Minute),
+		Path:     "/",
+		HttpOnly: IsHttpOnly,
+		Secure:   IsSecure,
+		SameSite: http.SameSiteLaxMode,
 	})
 
-	redirectURI := fmt.Sprintf("%s://%s:%s/auth/callback", serverHTTP, serverHost, serverPort)
-
-	url := fmt.Sprintf(
-		"https://hh.ru/oauth/authorize?response_type=%s&client_id=%s&state=%s&redirect_uri=%s",
-		"code", clientID, state, redirectURI,
-	)
-
+	url := h.HH.Oauth.AuthCodeURL(state, oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func callback(w http.ResponseWriter, r *http.Request) {
-	code := r.URL.Query().Get("code")
-	if code == "" {
-		http.Error(w, "bad code", http.StatusBadRequest)
-		return
-	}
+func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
+	stateRecieved := r.URL.Query().Get("state")
 
-	queryState := r.URL.Query().Get("state")
-	cookieState, err := r.Cookie("auth_state")
+	stateCookie, err := r.Cookie(os.Getenv("OAUTH_STATE"))
 	if err != nil {
-		http.Error(w, "bad state", http.StatusBadRequest)
+		log.Println(err)
+		http.Error(w, "could not get token "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if cookieState.Value != queryState {
-		http.Error(w, "states dont match", http.StatusBadRequest)
-		return
-	}
-
+	stateExpected := stateCookie
 	http.SetCookie(w, &http.Cookie{
-		Name:   "auth_state",
-		Value:  "",
-		MaxAge: -1,
-		Path:   "/",
+		Name:     os.Getenv("OAUTH_STATE"),
+		Value:    "",
+		MaxAge:   -1,
+		HttpOnly: IsHttpOnly,
+		Secure:   IsSecure,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
 	})
 
-	token, err := HHGetToken(client, code)
+	if stateRecieved != stateExpected.Value {
+		log.Println(err)
+		http.Error(w, "could not get token "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "Authorization code missing", http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.HH.Oauth.Exchange(context.Background(), code)
 	if err != nil {
 		http.Error(w, "could not get token "+err.Error(), http.StatusBadRequest)
 		return
@@ -140,7 +150,7 @@ func callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = createOrUpdateTokens(db, *token, code, user.ID); err != nil {
+	if err = createOrUpdateTokens(db, token, code, user.ID); err != nil {
 		http.Error(w, "could not create or update tokens to database "+err.Error(), http.StatusBadRequest)
 		return
 	}

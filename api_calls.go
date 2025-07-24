@@ -5,9 +5,39 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
 )
+
+type Endpoint struct {
+	Me      string
+	Resumes string
+}
+
+type HeadHunter struct {
+	Oauth     *oauth2.Config
+	Headers   map[string]string
+	Endpoints Endpoint
+}
+
+func NewHeadHunter() *HeadHunter {
+	return &HeadHunter{
+		Oauth: &oauth2.Config{
+			ClientID:     os.Getenv("HH_CLIENT_ID"),
+			ClientSecret: os.Getenv("HH_CLIENT_SECRET"),
+			RedirectURL:  os.Getenv("HH_REDIRECT_URL"),
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://hh.ru/oauth/authorize",
+				TokenURL: "https://api.hh.ru/token",
+			},
+		},
+		Headers:   map[string]string{"HH-User-Agent": os.Getenv("HH_USER_AGENT")},
+		Endpoints: Endpoint{Me: "https://api.hh.ru/me", Resumes: "https://api.hh.ru/resumes/mine"},
+	}
+}
 
 // we have time string without offset
 // because fuck you that's why
