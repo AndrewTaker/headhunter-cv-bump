@@ -13,6 +13,8 @@ import (
 // because fuck you that's why
 type HHTime time.Time
 
+const timeLayout = "2006-01-02 15:04:05-07:00"
+
 func (hht *HHTime) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), `"`)
 	t, err := time.Parse("2006-01-02T15:04:05-0700", s)

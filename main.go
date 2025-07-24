@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/alexedwards/scs/v2"
@@ -13,29 +14,41 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-const timeLayout = "2006-01-02 15:04:05-07:00"
-
 var (
-	clientID, clientSecret, resumeID   string
-	serverPort, serverHost, serverHTTP string
-	templates                          *template.Template
-	client                             *http.Client
-	db                                 *sql.DB
-	sessionManager                     *scs.SessionManager
+	clientID, clientSecret, resumeID, redirectURL string
+	isProd                                        bool
+	serverPort, serverHost, serverHTTP            string
+	templates                                     *template.Template
+	client                                        *http.Client
+	db                                            *sql.DB
+	sessionManager                                *scs.SessionManager
 )
 
 func main() {
+	clientID = os.Getenv("HH_CLIENT_ID")
+	clientSecret = os.Getenv("HH_CLIENT_SECRET")
+	redirectURL = os.Getenv("HH_REDIRECT_URL")
+
+	serverHTTP = os.Args[1]
+	serverHost = os.Args[2]
+	serverPort = os.Args[3]
+	isProd, _ = strconv.ParseBool(os.Args[4])
+
+	if clientID == "" || clientSecret == "" || redirectURL == "" {
+		log.Fatal("main: no credentials provided")
+	}
+
 	var err error
 	db, err = db_init()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("main: ", err)
 	}
 
 	sessionManager = scs.New()
 	sessionManager.Lifetime = 1 * time.Hour
 	sessionManager.Cookie.Persist = true
-	// sessionManager.Cookie.Secure = false
-	// sessionManager.Cookie.SameSite = http.SameSiteLaxMode
+	sessionManager.Cookie.Secure = isProd
+	sessionManager.Cookie.SameSite = http.SameSiteLaxMode
 	sessionManager.Store = memstore.New()
 
 	client = &http.Client{Timeout: 10 * time.Second}
@@ -54,16 +67,6 @@ func main() {
 				"templates/toggle-switch.html",
 			),
 	)
-	clientID = os.Getenv("HH_CLIENT_ID")
-	clientSecret = os.Getenv("HH_CLIENT_SECRET")
-
-	serverHTTP = os.Args[1]
-	serverHost = os.Args[2]
-	serverPort = os.Args[3]
-
-	if clientID == "" || clientSecret == "" {
-		log.Fatal("no credentials provided")
-	}
 
 	http.HandleFunc("/", home)
 	http.HandleFunc("/login", login)
@@ -78,7 +81,7 @@ func main() {
 	log.Printf("server starting %s://%s:%s", serverHTTP, serverHost, serverPort)
 	err = http.ListenAndServe(":"+serverPort, sessionManager.LoadAndSave(http.DefaultServeMux))
 	if err != nil {
-		log.Fatal("couldnt stop server", err)
+		log.Fatal("main: couldnt start server", err)
 	}
 
 }

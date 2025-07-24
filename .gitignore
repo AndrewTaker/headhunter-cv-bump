@@ -3,3 +3,4 @@ creds/
 *.db
 *.json
 bin/hhcv
+*.sh

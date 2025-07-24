@@ -78,13 +78,13 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:    "auth_state",
-		Value:   state,
-		Expires: time.Now().Add(5 * time.Minute),
-		Path:    "/",
-		// HttpOnly: true, // Optional: prevents client-side script access
-		// Secure:   true, // Optional: only send over HTTPS
-		// SameSite: http.SameSiteLaxMode, // Optional: prevents CSRF
+		Name:     "auth_state",
+		Value:    state,
+		Expires:  time.Now().Add(5 * time.Minute),
+		Path:     "/",
+		HttpOnly: isProd,
+		Secure:   isProd,
+		SameSite: http.SameSiteLaxMode,
 	})
 
 	redirectURI := fmt.Sprintf("%s://%s:%s/auth/callback", serverHTTP, serverHost, serverPort)
