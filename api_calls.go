@@ -110,7 +110,7 @@ func HHGetToken(client *http.Client, code string) (*Token, error) {
 	q.Add("client_secret", clientSecret)
 	q.Add("code", code)
 	q.Add("grant_type", "authorization_code")
-	q.Add("redirect_uri", "http://localhost:44444/auth/callback")
+	q.Add("redirect_uri", redirectURL)
 	req.URL.RawQuery = q.Encode()
 
 	resp, err := client.Do(req)
