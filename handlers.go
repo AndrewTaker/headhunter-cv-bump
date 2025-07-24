@@ -223,6 +223,7 @@ func updateResumesOnDemand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessionManager.Put(r.Context(), "error", errMsg)
+	sessionManager.Put(r.Context(), "notification", "Updated")
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 

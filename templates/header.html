@@ -8,20 +8,15 @@
             </li>
         {{ end }}
     </ul>
+
     <ul>
-        <li><a href="/">home</a></li>
-        <li><a 
-            href="#"
-            hx-get="/open-modal"
-            hx-target="#modal"
-            hx-trigger="click"
-        >remove my data</a>
-        </li>
-        {{ if.User }}
-            <li><a href="/logout">logout<a></li>
-            <li><a href="/get-resumes">update resumes</a></li>
+        <li><a href="/">Home</a></li>
+        {{ if.IsLoggedIn }}
+                <li><a href="/get-resumes">Update Resumes</a></li>
+                <li><a href="#" hx-get="/open-modal" hx-target="#modal" hx-trigger="click">Remove My Data</a></li>
+                <li><a href="/logout" class="contrast">Log Out</a></li>
         {{ else }}
-            <li><a href="/login">login</a></li>
+                <li><a href="/login" class="contrast">Log In</a></li>
         {{ end }}
     </ul>
 </nav>
