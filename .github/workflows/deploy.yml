@@ -19,7 +19,7 @@ jobs:
 
       - name: Build binary
         run: |
-          GOOS=linux GOARCH=amd64 go build -o app ./cmd
+          GOOS=linux GOARCH=amd64 go build -o app .
 
       - name: Upload binary and templates
         uses: appleboy/scp-action@v0.1.7
