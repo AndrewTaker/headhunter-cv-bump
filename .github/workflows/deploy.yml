@@ -27,7 +27,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
+          port: ${{ secrets.VPS_SSH_PORT }}
           source: "app,templates"
           target: ${{ secrets.VPS_PATH }}
 
@@ -35,7 +35,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
-          port: ${{ secrets.VPS_PORT }}
+          port: ${{ secrets.VPS_SSH_PORT }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
