@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -36,7 +37,7 @@ func (hht HHTime) Value() (driver.Value, error) {
 }
 
 func db_init() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "./hh.db")
+	db, err := sql.Open("sqlite3", os.Getenv("DB_NAME"))
 	if err != nil {
 		return nil, err
 	}

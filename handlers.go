@@ -36,7 +36,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 	if u != "" {
 		user, err := getUserByID(db, u)
 		if err != nil {
-			log.Printf("ERROR: /home failed to get user %s: %v", u, err)
+			log.Printf("/home failed to get user %s: %v", u, err)
 			data.Error = "Could not load your user profile. Please try logging in again."
 		} else {
 			data.IsLoggedIn = true
@@ -46,7 +46,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 		if data.User != nil {
 			resumes, err := getResumesByUserID(db, u)
 			if err != nil {
-				log.Printf("ERROR: /home failed to get resumes for user %s: %v", u, err)
+				log.Printf("/home failed to get resumes for user %s: %v", u, err)
 				if data.Error == "" {
 					data.Error = "Could not load your resumes. Please try refreshing."
 				} else {
@@ -65,7 +65,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := templates.ExecuteTemplate(w, "base", data); err != nil {
-		log.Printf("ERROR: /home failed to execute template: %v", err)
+		log.Printf("/home: failed to execute template: %v", err)
 		http.Error(w, "Internal server error.", http.StatusInternalServerError)
 	}
 }
@@ -73,6 +73,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 func login(w http.ResponseWriter, r *http.Request) {
 	state, err := GenerateState(64)
 	if err != nil {
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		http.Error(w, "could not generate state string", http.StatusInternalServerError)
 		return
 	}
@@ -100,19 +101,22 @@ func login(w http.ResponseWriter, r *http.Request) {
 func callback(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		http.Error(w, "bad code", http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", fmt.Errorf("Could not get code from url"))
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
 	queryState := r.URL.Query().Get("state")
 	cookieState, err := r.Cookie("auth_state")
 	if err != nil {
-		http.Error(w, "bad state", http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", err)
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
 	if cookieState.Value != queryState {
-		http.Error(w, "states dont match", http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", fmt.Errorf("States do not match"))
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
@@ -125,34 +129,40 @@ func callback(w http.ResponseWriter, r *http.Request) {
 
 	token, err := HHGetToken(client, code)
 	if err != nil {
-		http.Error(w, "could not get token "+err.Error(), http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", err)
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
 	user, err := HHGetUser(client, token.AccessToken)
 	if err != nil {
-		http.Error(w, "could not get user "+err.Error(), http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", err)
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
 	if err = createOrUpdateUser(db, user); err != nil {
-		http.Error(w, "could not create user to database "+err.Error(), http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", err)
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
 	if err = createOrUpdateTokens(db, *token, code, user.ID); err != nil {
-		http.Error(w, "could not create or update tokens to database "+err.Error(), http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", err)
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
 	resumes, err := HHGetResumes(client, token.AccessToken)
 	if err != nil {
-		http.Error(w, "could not fetch resumes "+err.Error(), http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", err)
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 
 	if err = createOrUpdateResumes(db, resumes, user.ID); err != nil {
-		http.Error(w, "could not create or update resumes to database "+err.Error(), http.StatusBadRequest)
+		log.Printf("/auth/callback: %v", err)
+		templates.ExecuteTemplate(w, "base", PageData{Error: "Error loggin in."})
 		return
 	}
 	sessionManager.Put(r.Context(), "userID", user.ID)
@@ -168,20 +178,20 @@ func toggleResume(w http.ResponseWriter, r *http.Request) {
 	var errMsg string
 
 	if err = r.ParseForm(); err != nil {
-		log.Println(err)
+		log.Printf("/toggle-resume: %v", err)
 		errMsg += " Error reading input. Try again."
 	}
 
 	desiredIsScheduled := r.Form.Has("is_scheduled")
 
 	if err = updateResumeScheduling(db, resumeID, userID, desiredIsScheduled); err != nil {
-		log.Println(err)
+		log.Printf("/toggle-resume: %v", err)
 		errMsg += " Could not update. Try again."
 	}
 
 	var resume *Resume
 	if resume, err = getResumeByID(db, resumeID, userID); err != nil {
-		log.Println(err)
+		log.Printf("/toggle-resume: %v", err)
 		errMsg += " Could not update. Try again."
 	}
 
@@ -223,7 +233,10 @@ func updateResumesOnDemand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessionManager.Put(r.Context(), "error", errMsg)
-	sessionManager.Put(r.Context(), "notification", "Updated")
+	if errMsg == "" {
+		sessionManager.Put(r.Context(), "notification", "Updated")
+	}
+
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
@@ -239,7 +252,7 @@ func invalidateUserData(w http.ResponseWriter, r *http.Request) {
 	userID := sessionManager.GetString(r.Context(), "userID")
 
 	if userID == "" {
-		sessionManager.Put(r.Context(), "error", "Not logged in.")
+		sessionManager.Put(r.Context(), "error", "Not logged in")
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
@@ -248,24 +261,26 @@ func invalidateUserData(w http.ResponseWriter, r *http.Request) {
 	var t *Token
 	var errMsg string
 	if t, err = getTokenByUserID(db, userID); err != nil {
-		log.Println(err)
+		log.Println("invalidateUserData: ", err)
 		errMsg += " Could not get credentials. Try again."
 	}
 
 	if err = HHInvalidateToken(client, t.AccessToken); err != nil {
-		log.Println(err)
+		log.Println("invalidateUserData: ", err)
 		errMsg += " Could not invalidate data from headhunter api. Contact to invalidate manually or try again."
 	}
 
 	if err = deleteUserByID(db, userID); err != nil {
-		log.Println(err)
+		log.Println("invalidateUserData: ", err)
 		errMsg += " Could not delete user data. Try again."
 	}
 
 	sessionManager.Remove(r.Context(), "userID")
-	sessionManager.Put(r.Context(), "notification", "your data was deleted.")
 	sessionManager.Put(r.Context(), "error", errMsg)
 
+	if errMsg == "" {
+		sessionManager.Put(r.Context(), "notification", "Your data was deleted")
+	}
 	w.Header().Set("HX-Redirect", "/")
 	w.WriteHeader(http.StatusNoContent)
 
