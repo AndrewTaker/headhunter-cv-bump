@@ -1,4 +1,4 @@
-module hhcv
+module hhcv-web
 
 go 1.23.3
 
