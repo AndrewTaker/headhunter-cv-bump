@@ -48,7 +48,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          source: "${{ env.WEB_APP_NAME }},${{ env.SCHEDULER_APP_NAME }},web/templates,web.service.template,scheduler.service.template"
+          source: "${{ env.WEB_APP_NAME }},${{ env.SCHEDULER_APP_NAME }},web.service.template"
           target: ${{ secrets.VPS_PATH }}
           strip_components: true
 
@@ -65,6 +65,7 @@ jobs:
 
             # service vars
             export APP_USER="${{ secrets.S_APP_USER }}"
+            echo $APP_USER
             export APP_GROUP="${{ secrets.S_APP_GROUP }}"
             export APP_WORKING_DIR="${VPS_ROOT}"
             export APP_ENV_PATH="${VPS_ROOT}/.env"

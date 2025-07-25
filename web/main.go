@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"html/template"
 	"log"
 	"net/http"
@@ -22,6 +23,9 @@ var (
 	client                                        *http.Client
 	db                                            *sql.DB
 	sessionManager                                *scs.SessionManager
+
+	//go:embed templates/*.html
+	templatesFS embed.FS
 )
 
 func main() {
@@ -59,7 +63,7 @@ func main() {
 					return t.Format(timeLayout)
 				},
 			}).
-			ParseFiles(
+			ParseFS(templatesFS,
 				"templates/base.html",
 				"templates/header.html",
 				"templates/info.html",
