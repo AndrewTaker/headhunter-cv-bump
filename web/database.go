@@ -75,6 +75,14 @@ func db_init() (*sql.DB, error) {
 		is_scheduled integer not null default 0,
 
 		foreign key (user_id) references users(id) on delete cascade
+	)
+
+	create table if not exists scheduler (
+		user_id text,
+		resume_id text,
+		resume_title text,
+		timestamp text,
+		error text
 	);
 	`
 
