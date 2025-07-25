@@ -48,7 +48,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
-          source: "${{ env.WEB_APP_NAME }},${{ env.SCHEDULER_APP_NAME }},templates,web.service.template,scheduler.service.template"
+          source: "${{ env.WEB_APP_NAME }},${{ env.SCHEDULER_APP_NAME }},web/templates,web.service.template,scheduler.service.template"
           target: ${{ secrets.VPS_PATH }}
 
       - name: Render Services and Restart on VPS
