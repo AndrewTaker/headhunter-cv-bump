@@ -61,7 +61,6 @@ jobs:
           script: |
             VPS_ROOT="${{ secrets.VPS_PATH }}"
             WEB_APP_BINARY="${VPS_ROOT}/${{ env.WEB_APP_NAME }}"
-            SCHEDULER_APP_BINARY="${VPS_ROOT}/${{ env.SCHEDULER_APP_NAME }}"
 
             # service vars
             export APP_USER="${{ secrets.S_APP_USER }}"

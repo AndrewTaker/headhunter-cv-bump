@@ -25,7 +25,6 @@ var (
 )
 
 func main() {
-	log.Println(os.Executable())
 	clientID = os.Getenv("HH_CLIENT_ID")
 	clientSecret = os.Getenv("HH_CLIENT_SECRET")
 	redirectURL = os.Getenv("HH_REDIRECT_URL")
