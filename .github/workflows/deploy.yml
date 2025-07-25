@@ -66,8 +66,8 @@ jobs:
             # service vars
             export APP_USER="${{ secrets.S_APP_USER }}"
             export APP_GROUP="${{ secrets.S_APP_GROUP }}"
-            export APP_WORKING_DIR="${{ secrets.S_WORKING_DIR }}"
-            export APP_ENV_PATH="${{ secrets.S_ENV_PATH }}"
+            export APP_WORKING_DIR="${VPS_ROOT}"
+            export APP_ENV_PATH="${VPS_ROOT}/.env"
 
             echo "Rendering and applying systemd service files..."
             if [ -f "${VPS_ROOT}/web.service.template" ]; then
@@ -77,10 +77,10 @@ jobs:
                 -v APP_WORKING_DIR="${APP_WORKING_DIR}" \
                 -v APP_ENV_PATH="${APP_ENV_PATH}" \
                 -v APP_BIN_PATH="${WEB_APP_BINARY}" \
-                < "${VPS_ROOT}/${{ env.WEB_APP_NAME }}.service.template" \
+                < "${VPS_ROOT}/web.service.template" \
                 | sudo tee "/etc/systemd/system/${{ env.WEB_APP_NAME }}.service" > /dev/null
             else
-              echo "Error: Web service template not found at ${VPS_ROOT}/${{ env.WEB_APP_NAME }}.service.template"
+              echo "Error: Web service template not found at ${VPS_ROOT}/web.service.template"
               exit 1
             fi
 
@@ -91,10 +91,10 @@ jobs:
                 -v APP_WORKING_DIR="${APP_WORKING_DIR}" \
                 -v APP_ENV_PATH="${APP_ENV_PATH}" \
                 -v APP_BIN_PATH="${SCHEDULER_APP_BINARY}" \
-                < "${VPS_ROOT}/${{ env.WEB_APP_NAME }}.service.template" \
-                | sudo tee "/etc/systemd/system/${{ env.WEB_APP_NAME }}.service" > /dev/null
+                < "${VPS_ROOT}/scheduler.service.template" \
+                | sudo tee "/etc/systemd/system/${{ env.SCHEDULER_APP_NAME }}.service" > /dev/null
             else
-              echo "Error: Web service template not found at ${VPS_ROOT}/${{ env.WEB_APP_NAME }}.service.template"
+              echo "Error: Scheduler service template not found at ${VPS_ROOT}/scheduler.service.template"
               exit 1
             fi
 
