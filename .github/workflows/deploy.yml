@@ -73,7 +73,7 @@ jobs:
             if [ -f "${VPS_ROOT}/web.service.template" ]; then
               envsubst '$APP_USER $APP_GROUP $APP_WORKING_DIR $APP_ENV_PATH $WEB_APP_BIN_PATH' \
                 < "${VPS_ROOT}/web.service.template" \
-                | sudo tee "/etc/systemd/system/${{ env.WEB_APP_NAME }}.service" > /dev/null
+                | sudo tee "/etc/systemd/system/${WEB_APP_NAME}.service" > /dev/null
             else
               echo "Error: Web service template not found at ${VPS_ROOT}/web.service.template"
               exit 1
