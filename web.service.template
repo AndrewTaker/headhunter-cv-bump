@@ -7,7 +7,7 @@ User=$APP_USER
 Group=$APP_GROUP
 
 WorkingDirectory=$APP_WORKING_DIR
-ExecStart=$APP_BIN_PATH http localhost 44444 true
+ExecStart=$WEB_APP_BIN_PATH http localhost 44444 true
 EnvironmentFile=$APP_ENV_PATH
 Restart=always
 

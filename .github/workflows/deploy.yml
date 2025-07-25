@@ -68,15 +68,12 @@ jobs:
             export APP_GROUP="${{ secrets.S_APP_GROUP }}"
             export APP_WORKING_DIR="${VPS_ROOT}"
             export APP_ENV_PATH="${VPS_ROOT}/.env"
+            export WEB_APP_BIN_PATH="${WEB_APP_BINARY}"
+            export SCHEDULER_APP_BIN_PATH="${SCHEDULER_APP_BINARY}"
 
             echo "Rendering and applying systemd service files..."
             if [ -f "${VPS_ROOT}/web.service.template" ]; then
-              envsubst \
-                -v APP_USER="${APP_USER}" \
-                -v APP_GROUP="${APP_GROUP}" \
-                -v APP_WORKING_DIR="${APP_WORKING_DIR}" \
-                -v APP_ENV_PATH="${APP_ENV_PATH}" \
-                -v APP_BIN_PATH="${WEB_APP_BINARY}" \
+              envsubst '$APP_USER $APP_GROUP $APP_WORKING_DIR $APP_ENV_PATH $WEB_APP_BIN_PATH' \
                 < "${VPS_ROOT}/web.service.template" \
                 | sudo tee "/etc/systemd/system/${{ env.WEB_APP_NAME }}.service" > /dev/null
             else
@@ -85,12 +82,7 @@ jobs:
             fi
 
             if [ -f "${VPS_ROOT}/scheduler.service.template" ]; then
-              envsubst \
-                -v APP_USER="${APP_USER}" \
-                -v APP_GROUP="${APP_GROUP}" \
-                -v APP_WORKING_DIR="${APP_WORKING_DIR}" \
-                -v APP_ENV_PATH="${APP_ENV_PATH}" \
-                -v APP_BIN_PATH="${SCHEDULER_APP_BINARY}" \
+              envsubst '$APP_USER $APP_GROUP $APP_WORKING_DIR $APP_ENV_PATH $SCHEDULER_APP_BIN_PATH' \
                 < "${VPS_ROOT}/scheduler.service.template" \
                 | sudo tee "/etc/systemd/system/${{ env.SCHEDULER_APP_NAME }}.service" > /dev/null
             else
