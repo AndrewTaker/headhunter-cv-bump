@@ -37,8 +37,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            mkdir -p "${{ secrets.VPS_BACKUP_PATH }}"
-            rsync -av --delete "${{ secrets.VPS_PATH }}/" "${{ secrets.VPS_BACKUP_PATH }}/"
+            mkdir -p /hhcv-backup
+            rsync -av --delete /hhcv/ /hhcv-backup/
 
       - name: Upload new binaries and templates to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -58,27 +58,4 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            # VPS_ROOT="${{ secrets.VPS_PATH }}"
-            # WEB_APP_BINARY="${VPS_ROOT}/${{ env.WEB_APP_NAME }}"
-            #
-            # # service vars
-            # export APP_USER="${{ secrets.S_APP_USER }}"
-            # export APP_GROUP="${{ secrets.S_APP_GROUP }}"
-            # export APP_WORKING_DIR="${VPS_ROOT}"
-            # export APP_ENV_PATH="${VPS_ROOT}/.env"
-            # export WEB_APP_BIN_PATH="${WEB_APP_BINARY}"
-            #
-            # env | grep "APP_*"
-            # echo "Rendering and applying systemd service files..."
-            # if [ -f "${VPS_ROOT}/web.service.template" ]; then
-            #   sudo envsubst '$APP_USER $APP_GROUP $APP_WORKING_DIR $APP_ENV_PATH $WEB_APP_BIN_PATH' \
-            #     < "${VPS_ROOT}/web.service.template" \
-            #     | sudo tee "/etc/systemd/system/${WEB_APP_NAME}.service" > /dev/null
-            # else
-            #   echo "Error: Web service template not found at ${VPS_ROOT}/web.service.template"
-            #   exit 1
-            # fi
-            #
-            echo "Reloading systemd daemon and restarting services..."
-            sudo systemctl daemon-reload || { echo "Daemon reload failed! Aborting."; exit 1; }
-            sudo systemctl restart "${WEB_APP_NAME}" || { echo "Failed to restart web service. Aborting."; exit 1; }
+            sudo systemctl restart hhcv-web.service

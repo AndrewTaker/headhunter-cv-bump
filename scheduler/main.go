@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("sqlite3", os.Getenv("DB_NAME"))
+	db, err := sql.Open("sqlite3", "./"+os.Getenv("DB_NAME"))
 	if err != nil {
 		log.Fatal("db err ", err)
 	}
