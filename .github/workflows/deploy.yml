@@ -69,7 +69,6 @@ jobs:
             export APP_WORKING_DIR="${VPS_ROOT}"
             export APP_ENV_PATH="${VPS_ROOT}/.env"
             export WEB_APP_BIN_PATH="${WEB_APP_BINARY}"
-            export SCHEDULER_APP_BIN_PATH="${SCHEDULER_APP_BINARY}"
 
             echo "Rendering and applying systemd service files..."
             if [ -f "${VPS_ROOT}/web.service.template" ]; then
@@ -81,16 +80,6 @@ jobs:
               exit 1
             fi
 
-            if [ -f "${VPS_ROOT}/scheduler.service.template" ]; then
-              envsubst '$APP_USER $APP_GROUP $APP_WORKING_DIR $APP_ENV_PATH $SCHEDULER_APP_BIN_PATH' \
-                < "${VPS_ROOT}/scheduler.service.template" \
-                | sudo tee "/etc/systemd/system/${{ env.SCHEDULER_APP_NAME }}.service" > /dev/null
-            else
-              echo "Error: Scheduler service template not found at ${VPS_ROOT}/scheduler.service.template"
-              exit 1
-            fi
-
             echo "Reloading systemd daemon and restarting services..."
             sudo systemctl daemon-reload || { echo "Daemon reload failed! Aborting."; exit 1; }
             sudo systemctl restart "${WEB_APP_NAME}" || { echo "Failed to restart web service. Aborting."; exit 1; }
-            sudo systemctl restart "${SCHEDULER_APP_NAME}" || { echo "Failed to restart scheduler service. Aborting."; exit 1; }
