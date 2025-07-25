@@ -67,7 +67,7 @@ func main() {
 		u.Timestamp = timestamp
 
 		_, err = db.Exec(
-			`insert into scheduler user_id, resume_id, resume_title, timestamp, error values (?, ?, ?, ?, ?)`,
+			`insert into scheduler (user_id, resume_id, resume_title, timestamp, error) values (?, ?, ?, ?, ?)`,
 			u.UserID, u.ResumeID, u.ResumeTitle, u.Timestamp, u.Error,
 		)
 		if err != nil {
