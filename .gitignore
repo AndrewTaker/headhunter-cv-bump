@@ -2,5 +2,7 @@ scripts/
 creds/
 *.db
 *.json
-bin/hhcv
+web/bin/hhcv
+scheduler/bin/hhcv-scheduler
 *.sh
+*.service

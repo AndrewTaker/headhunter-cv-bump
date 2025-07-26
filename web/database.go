@@ -76,6 +76,14 @@ func db_init() (*sql.DB, error) {
 
 		foreign key (user_id) references users(id) on delete cascade
 	);
+
+	create table if not exists scheduler (
+		user_id text,
+		resume_id text,
+		resume_title text,
+		timestamp text,
+		error text
+	);
 	`
 
 	_, err = db.Exec(tables)

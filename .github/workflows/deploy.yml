@@ -1,40 +1,35 @@
-
-name: Deploy to VPS
+name: Deploy
 
 on:
   push:
     branches:
-      main
+      - "main"
   workflow_dispatch:
+
+env:
+  WEB_APP_NAME: "hhcv-web"
+  SCHEDULER_APP_NAME: "hhcv-scheduler"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Go
+      - name: Setup Go environment
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.23.3'
 
-      - name: Build binary
+      - name: Build binaries
         run: |
-          GOOS=linux GOARCH=amd64 go build -o hhcv .
+          GOOS=linux GOARCH=amd64 go build -o "${{ env.WEB_APP_NAME }}" ./web
+          GOOS=linux GOARCH=amd64 go build -o "${{ env.SCHEDULER_APP_NAME }}" ./scheduler
 
-      - name: Upload binary and templates
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_SSH_PORT }}
-          source: "hhcv,templates"
-          target: ${{ secrets.VPS_PATH }}
-
-      - name: Restart service on VPS
+      - name: Create backup on VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -42,4 +37,25 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            sudo systemctl restart hhcv.service
+            mkdir -p /hhcv-backup
+            rsync -av --delete /hhcv/ /hhcv-backup/
+
+      - name: Upload new binaries and templates to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          source: "${{ env.WEB_APP_NAME }},${{ env.SCHEDULER_APP_NAME }},web.service.template"
+          target: ${{ secrets.VPS_PATH }}
+
+      - name: Render Services and Restart on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            sudo systemctl restart hhcv-web.service

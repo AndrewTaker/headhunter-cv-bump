@@ -1,0 +1,19 @@
+[Unit]
+Description=HHCV web
+After=network.target
+
+[Service]
+User=$APP_USER
+Group=$APP_GROUP
+
+WorkingDirectory=$APP_WORKING_DIR
+ExecStart=$WEB_APP_BIN_PATH http localhost 44444 true
+EnvironmentFile=$APP_ENV_PATH
+Restart=always
+
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
