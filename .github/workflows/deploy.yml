@@ -1,9 +1,9 @@
-name: Deploy to VPS (Corrected Backup Order)
+name: Deploy
 
 on:
   push:
     branches:
-      - "1.1"
+      - "main"
   workflow_dispatch:
 
 env:
