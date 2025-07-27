@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+type DB struct {
+	*sql.DB
+}
+
 func (hht *HHTime) Scan(value any) error {
 	switch v := value.(type) {
 	case string:
@@ -36,7 +40,7 @@ func (hht HHTime) Value() (driver.Value, error) {
 	return time.Time(hht), nil
 }
 
-func db_init() (*sql.DB, error) {
+func NewDB() (*DB, error) {
 	db, err := sql.Open("sqlite3", os.Getenv("DB_NAME"))
 	if err != nil {
 		return nil, err
@@ -91,10 +95,10 @@ func db_init() (*sql.DB, error) {
 		return nil, err
 	}
 
-	return db, nil
+	return &DB{db}, nil
 }
 
-func createOrUpdateUser(db *sql.DB, user *User) error {
+func (db *DB) CreateOrUpdateUser(user *User) error {
 	query := `
 	insert into users (id, first_name, last_name, middle_name) values (?, ?, ?, ?)
 	on conflict(id) do update set
@@ -102,6 +106,7 @@ func createOrUpdateUser(db *sql.DB, user *User) error {
 	last_name = excluded.last_name,
 	middle_name = excluded.middle_name
 	`
+
 	_, err := db.Exec(query, user.ID, user.FirstName, user.LastName, user.MiddleName)
 	if err != nil {
 		return err
@@ -110,9 +115,10 @@ func createOrUpdateUser(db *sql.DB, user *User) error {
 	return nil
 }
 
-func getUserByID(db *sql.DB, userID string) (*User, error) {
+func (db *DB) GetUserByID(userID string) (*User, error) {
 	query := `select id, first_name, last_name, middle_name from users where id = ?`
 	var u User
+
 	if err := db.QueryRow(query, userID).Scan(
 		&u.ID,
 		&u.FirstName,
@@ -128,7 +134,7 @@ func getUserByID(db *sql.DB, userID string) (*User, error) {
 	return &u, nil
 }
 
-func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) error {
+func (db *DB) CreateOrUpdateToken(token Token, code string, userID string) error {
 	query := `
 	insert into tokens (access_token, refresh_token, expires_in, code, user_id) values (?, ?, ?, ?, ?)
 	on conflict(user_id) do update set
@@ -137,12 +143,12 @@ func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) 
 	expires_in = excluded.expires_in,
 	code = excluded.code
 	`
-	eat, ert, err := tokens.encrypt()
+	eat, ert, err := token.encrypt()
 	if err != nil {
 		return err
 	}
 
-	_, err = db.Exec(query, eat, ert, tokens.ExpiresIn, code, userID)
+	_, err = db.Exec(query, eat, ert, token.ExpiresIn, code, userID)
 	if err != nil {
 		return err
 	}
@@ -150,7 +156,7 @@ func createOrUpdateTokens(db *sql.DB, tokens Token, code string, userID string) 
 	return nil
 }
 
-func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
+func (db *DB) BatchCreateOrUpdateResumes(resumes []Resume, userID string) error {
 	query := `
 	insert into resumes (id, title, alternate_url, created_at, updated_at, user_id) values (?, ?, ?, ?, ?, ?)
 	on conflict(id) do update set
@@ -160,6 +166,7 @@ func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
 	updated_at = excluded.updated_at,
 	user_id = excluded.user_id;
 	`
+
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -190,8 +197,9 @@ func createOrUpdateResumes(db *sql.DB, resumes []Resume, userID string) error {
 	return nil
 }
 
-func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
+func (db *DB) GetResumesByUserID(userID string) ([]Resume, error) {
 	query := "select id, title, alternate_url, created_at, updated_at, is_scheduled from resumes where user_id = ?"
+
 	rows, err := db.Query(query, userID)
 	if err != nil {
 		return nil, err
@@ -224,11 +232,11 @@ func getResumesByUserID(db *sql.DB, userID string) ([]Resume, error) {
 	return resumes, nil
 }
 
-func getResumeByID(db *sql.DB, rID, uID string) (*Resume, error) {
+func (db *DB) GetUsersResumeByID(resumeID, userID string) (*Resume, error) {
 	query := `select id, title, created_at, updated_at, is_scheduled from resumes where id = ? and user_id = ?`
 
 	var r Resume
-	if err := db.QueryRow(query, rID, uID).Scan(
+	if err := db.QueryRow(query, resumeID, userID).Scan(
 		&r.ID,
 		&r.Title,
 		&r.CreatedAt,
@@ -244,7 +252,7 @@ func getResumeByID(db *sql.DB, rID, uID string) (*Resume, error) {
 	return &r, nil
 }
 
-func updateResumeScheduling(db *sql.DB, rID, uID string, isScheduled bool) error {
+func (db *DB) UpdateResumeScheduling(resumeID, userID string, isScheduled bool) error {
 	scheduledValue := 0
 	if isScheduled {
 		scheduledValue = 1
@@ -252,18 +260,18 @@ func updateResumeScheduling(db *sql.DB, rID, uID string, isScheduled bool) error
 
 	query := `update resumes set is_scheduled = ? where id = ? and user_id = ?`
 
-	if _, err := db.Exec(query, scheduledValue, rID, uID); err != nil {
+	if _, err := db.Exec(query, scheduledValue, resumeID, userID); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func getTokenByUserID(db *sql.DB, uID string) (*Token, error) {
+func (db *DB) GetTokenByUserID(userID string) (*Token, error) {
 	query := `select access_token, refresh_token, expires_in from tokens where user_id = ?`
 
 	var t Token
-	if err := db.QueryRow(query, uID).Scan(
+	if err := db.QueryRow(query, userID).Scan(
 		&t.AccessToken,
 		&t.RefreshToken,
 		&t.ExpiresIn,
@@ -280,7 +288,7 @@ func getTokenByUserID(db *sql.DB, uID string) (*Token, error) {
 
 	return &t, nil
 }
-func deleteResumes(db *sql.DB, resumes []Resume, userID string) error {
+func (db *DB) DeleteResumes(resumes []Resume, userID string) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -304,7 +312,7 @@ func deleteResumes(db *sql.DB, resumes []Resume, userID string) error {
 	return nil
 }
 
-func reconcileResumes(db *sql.DB, hhr, dbr []Resume, userID string) error {
+func (db *DB) ReconcileResumes(hhr, dbr []Resume, userID string) error {
 	var rDelete, rCreateOrUppdate []Resume
 
 	dbmap := make(map[string]Resume, len(dbr))
@@ -327,21 +335,21 @@ func reconcileResumes(db *sql.DB, hhr, dbr []Resume, userID string) error {
 		}
 	}
 
-	if err := deleteResumes(db, rDelete, userID); err != nil {
+	if err := db.DeleteResumes(rDelete, userID); err != nil {
 		return err
 	}
 
-	if err := createOrUpdateResumes(db, rCreateOrUppdate, userID); err != nil {
+	if err := db.BatchCreateOrUpdateResumes(rCreateOrUppdate, userID); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func deleteUserByID(db *sql.DB, uID string) error {
+func (db *DB) DeleteUserByID(userID string) error {
 	query := `delete from users where id = ?`
 
-	if _, err := db.Exec(query, uID); err != nil {
+	if _, err := db.Exec(query, userID); err != nil {
 		return err
 	}
 
