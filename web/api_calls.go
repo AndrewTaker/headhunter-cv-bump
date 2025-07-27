@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -84,47 +85,6 @@ type HHError struct {
 	ErrorDescription string `json:"error_description"`
 }
 
-type Token struct {
-	AccessToken  string `json:"access_token"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    uint   `json:"expires_in"`
-}
-
-func (t *Token) encrypt() (string, string, error) {
-	var at, rt string
-	var err error
-
-	if at, err = Encrypt(t.AccessToken); err != nil {
-		return "", "", err
-	}
-
-	if rt, err = Encrypt(t.RefreshToken); err != nil {
-		return "", "", err
-	}
-
-	return at, rt, nil
-}
-
-func (t *Token) decrypt() error {
-	var at, rt string
-	var err error
-
-	if at, err = Decrypt(t.AccessToken); err != nil {
-		return err
-	}
-
-	if rt, err = Decrypt(t.RefreshToken); err != nil {
-		return err
-	}
-
-	t.AccessToken = at
-	t.RefreshToken = rt
-
-	return nil
-
-}
-
 type User struct {
 	ID         string `json:"id"`
 	FirstName  string `json:"first_name"`
@@ -141,15 +101,17 @@ type Resume struct {
 	IsScheduled  int
 }
 
-func HHGetUser(client *http.Client, t string) (*User, error) {
+func (hh *HeadHunter) GetUser(ctx context.Context, token *oauth2.Token) (*User, error) {
+
+	client := oauth2.NewClient(ctx, token)
 	req, err := http.NewRequest("GET", "https://api.hh.ru/me", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+t)
-	req.Header.Set("HH-User-Agent", "n0thingg@yandex.ru update-cv")
+	req.Header.Set("Authorization", "Bearer "+at)
+	hh.ApplyHeaders(req)
 
 	resp, err := client.Do(req)
 	if err != nil {

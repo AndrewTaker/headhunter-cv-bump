@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
 type DB struct {
@@ -117,8 +119,8 @@ func (db *DB) CreateOrUpdateUser(user *User) error {
 
 func (db *DB) GetUserByID(userID string) (*User, error) {
 	query := `select id, first_name, last_name, middle_name from users where id = ?`
-	var u User
 
+	var u User
 	if err := db.QueryRow(query, userID).Scan(
 		&u.ID,
 		&u.FirstName,
@@ -134,7 +136,7 @@ func (db *DB) GetUserByID(userID string) (*User, error) {
 	return &u, nil
 }
 
-func (db *DB) CreateOrUpdateToken(token Token, code string, userID string) error {
+func (db *DB) CreateOrUpdateToken(token *oauth2.Token, code string, userID string) error {
 	query := `
 	insert into tokens (access_token, refresh_token, expires_in, code, user_id) values (?, ?, ?, ?, ?)
 	on conflict(user_id) do update set
@@ -143,7 +145,13 @@ func (db *DB) CreateOrUpdateToken(token Token, code string, userID string) error
 	expires_in = excluded.expires_in,
 	code = excluded.code
 	`
-	eat, ert, err := token.encrypt()
+
+	eat, err := Encrypt(token.AccessToken)
+	if err != nil {
+		return err
+	}
+
+	ert, err := Encrypt(token.RefreshToken)
 	if err != nil {
 		return err
 	}
@@ -267,27 +275,38 @@ func (db *DB) UpdateResumeScheduling(resumeID, userID string, isScheduled bool) 
 	return nil
 }
 
-func (db *DB) GetTokenByUserID(userID string) (*Token, error) {
+func (db *DB) GetTokenByUserID(userID string) (*oauth2.Token, error) {
 	query := `select access_token, refresh_token, expires_in from tokens where user_id = ?`
 
-	var t Token
+	var at, rt string
+	var expires int
 	if err := db.QueryRow(query, userID).Scan(
-		&t.AccessToken,
-		&t.RefreshToken,
-		&t.ExpiresIn,
+		&at,
+		&rt,
+		&expires,
 	); err != nil {
 		if err == sql.ErrNoRows {
-			return &Token{}, err
+			return &oauth2.Token{}, err
 		}
 		return nil, err
 	}
 
-	if err := t.decrypt(); err != nil {
-		return &Token{}, nil
+	dat, err := Decrypt(at)
+	if err != nil {
+		return &oauth2.Token{}, err
 	}
 
-	return &t, nil
+	drt, err := Decrypt(rt)
+	if err != nil {
+		return &oauth2.Token{}, err
+	}
+
+	return &oauth2.Token{
+		AccessToken:  dat,
+		RefreshToken: drt,
+	}, nil
 }
+
 func (db *DB) DeleteResumes(resumes []Resume, userID string) error {
 	tx, err := db.Begin()
 	if err != nil {
