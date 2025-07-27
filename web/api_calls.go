@@ -5,9 +5,54 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"golang.org/x/oauth2"
 )
+
+type Endpoint struct {
+	Me        string
+	MyResumes string
+}
+
+type HeadHunter struct {
+	DB            *DB
+	Oauth2Config  *oauth2.Config
+	DefaultClient *http.Client
+	Endpoint      Endpoint
+	Headers       map[string]string
+}
+
+func NewHeadHunter(db *DB) *HeadHunter {
+	return &HeadHunter{
+		DB: db,
+		Oauth2Config: &oauth2.Config{
+			ClientID:     os.Getenv("HH_CLIENT_ID"),
+			ClientSecret: os.Getenv("HH_CLIENT_SECRET"),
+			RedirectURL:  os.Getenv("HH_REDIRECT_URL"),
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://hh.ru/oauth/authorize",
+				TokenURL: "https://api.hh.ru/token",
+			},
+		},
+		DefaultClient: &http.Client{Timeout: 15 * time.Second},
+		Endpoint: Endpoint{
+			Me:        "https://api.hh.ru/me",
+			MyResumes: "https://api.hh.ru/resumes/mine",
+		},
+		Headers: map[string]string{
+			"HH-User-Agent": os.Getenv("HH_USER_AGENT"),
+		},
+	}
+}
+
+func (hh *HeadHunter) ApplyHeaders(r *http.Request) {
+	for k, v := range hh.Headers {
+		r.Header.Set(k, v)
+	}
+}
 
 // we have time string without offset
 // because fuck you that's why
