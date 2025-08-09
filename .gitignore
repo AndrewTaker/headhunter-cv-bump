@@ -6,3 +6,4 @@ web/bin/hhcv
 scheduler/bin/hhcv-scheduler
 *.sh
 *.service
+.env
