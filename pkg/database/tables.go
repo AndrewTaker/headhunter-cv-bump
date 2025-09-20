@@ -24,8 +24,8 @@ var tables = `
 		title text,
 		created_at text,
 		updated_at text,
-		user_id text,
 		is_scheduled integer not null default 0,
+		user_id text,
 
 		foreign key (user_id) references users(id) on delete cascade
 	);
