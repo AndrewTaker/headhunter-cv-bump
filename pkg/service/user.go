@@ -7,8 +7,8 @@ import (
 
 type UserService interface {
 	CreateOrUpdateUser(user *model.User) error
-	GetUserByID(id string) (*model.User, error)
-	DeleteUserByID(id string) error
+	GetUser(id string) (*model.User, error)
+	DeleteUser(id string) error
 }
 
 type UserServiceImpl struct {
@@ -23,10 +23,10 @@ func (us *UserServiceImpl) CreateOrUpdateUser(user *model.User) error {
 	return us.userRepo.CreateOrUpdateUser(user)
 }
 
-func (us *UserServiceImpl) GetUserByID(id string) (*model.User, error) {
+func (us *UserServiceImpl) GetUser(id string) (*model.User, error) {
 	return us.userRepo.GetUserByID(id)
 }
 
-func (us *UserServiceImpl) DeleteUserByID(id string) error {
+func (us *UserServiceImpl) DeleteUser(id string) error {
 	return us.userRepo.DeleteUserByID(id)
 }
