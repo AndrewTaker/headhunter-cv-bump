@@ -38,14 +38,14 @@ func (hht HHTime) Value() (driver.Value, error) {
 	return time.Time(hht), nil
 }
 
-type SqliteUser struct {
+type User struct {
 	ID         string
 	FirstName  string
 	LastName   string
 	MiddleName string
 }
 
-type SqliteResume struct {
+type Resume struct {
 	ID           string
 	AlternateUrl string
 	Title        string
@@ -55,7 +55,7 @@ type SqliteResume struct {
 	IsScheduled  int
 }
 
-type SqliteToken struct {
+type Token struct {
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    uint
@@ -63,7 +63,7 @@ type SqliteToken struct {
 	TokenType    string
 }
 
-type SqliteScheduler struct {
+type Scheduler struct {
 	UserID      string
 	ResumeID    string
 	ResumeTitle string
