@@ -8,7 +8,7 @@ import (
 )
 
 type ResumeRepository interface {
-	CreateOrUpdateResume(resumes []model.Resume, userID string) error
+	CreateOrUpdateResumes(resumes []model.Resume, userID string) error
 	GetResumesByUserID(userID string) ([]model.Resume, error)
 	GetResumeByID(resumeID, userID string) (*model.Resume, error)
 	ToggleScheduling(resumeID, userID string, isScheduled bool) error
@@ -22,7 +22,7 @@ func NewSqliteResumeRepository(db *database.DB) ResumeRepository {
 	return &SqliteResumeRepository{DB: db}
 }
 
-func (ur *SqliteResumeRepository) CreateOrUpdateResume(resumes []model.Resume, userID string) error {
+func (ur *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, userID string) error {
 	query := `
 	insert into resumes (id, title, alternate_url, created_at, updated_at, user_id) values (?, ?, ?, ?, ?, ?)
 	on conflict(id) do update set
