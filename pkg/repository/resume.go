@@ -9,7 +9,7 @@ import (
 
 type ResumeRepository interface {
 	CreateOrUpdateResumes(resumes []model.Resume, userID string) error
-	GetResumesByUserID(userID string) ([]model.Resume, error)
+	GetUserResumes(userID string) ([]model.Resume, error)
 	GetResumeByID(resumeID, userID string) (*model.Resume, error)
 	ToggleScheduling(resumeID, userID string, isScheduled bool) error
 }
@@ -62,7 +62,7 @@ func (ur *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, 
 	return nil
 }
 
-func (ur *SqliteResumeRepository) GetResumesByUserID(userID string) ([]model.Resume, error) {
+func (ur *SqliteResumeRepository) GetUserResumes(userID string) ([]model.Resume, error) {
 	query := "select id, title, alternate_url, created_at, updated_at, is_scheduled from resumes where user_id = ?"
 
 	rows, err := ur.DB.Query(query, userID)
