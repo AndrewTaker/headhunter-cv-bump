@@ -12,6 +12,7 @@ type ResumeRepository interface {
 	GetUserResumes(userID string) ([]model.Resume, error)
 	GetResumeByID(resumeID, userID string) (*model.Resume, error)
 	ToggleScheduling(resumeID, userID string, isScheduled bool) error
+	DeleteResumesByUserID(resumes []model.Resume, userID string) error
 }
 
 type SqliteResumeRepository struct {
@@ -22,7 +23,7 @@ func NewSqliteResumeRepository(db *database.DB) ResumeRepository {
 	return &SqliteResumeRepository{DB: db}
 }
 
-func (ur *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, userID string) error {
+func (rr *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, userID string) error {
 	query := `
 	insert into resumes (id, title, alternate_url, created_at, updated_at, user_id) values (?, ?, ?, ?, ?, ?)
 	on conflict(id) do update set
@@ -32,7 +33,7 @@ func (ur *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, 
 	updated_at = excluded.updated_at,
 	user_id = excluded.user_id;
 	`
-	tx, err := ur.DB.Begin()
+	tx, err := rr.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -62,10 +63,10 @@ func (ur *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, 
 	return nil
 }
 
-func (ur *SqliteResumeRepository) GetUserResumes(userID string) ([]model.Resume, error) {
+func (rr *SqliteResumeRepository) GetUserResumes(userID string) ([]model.Resume, error) {
 	query := "select id, title, alternate_url, created_at, updated_at, is_scheduled from resumes where user_id = ?"
 
-	rows, err := ur.DB.Query(query, userID)
+	rows, err := rr.DB.Query(query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +98,11 @@ func (ur *SqliteResumeRepository) GetUserResumes(userID string) ([]model.Resume,
 	return resumes, nil
 }
 
-func (ur *SqliteResumeRepository) GetResumeByID(resumeID, userID string) (*model.Resume, error) {
+func (rr *SqliteResumeRepository) GetResumeByID(resumeID, userID string) (*model.Resume, error) {
 	query := `select id, title, created_at, updated_at, is_scheduled from resumes where id = ? and user_id = ?`
 
 	var r model.Resume
-	if err := ur.DB.QueryRow(query, resumeID, userID).Scan(
+	if err := rr.DB.QueryRow(query, resumeID, userID).Scan(
 		&r.ID,
 		&r.Title,
 		&r.CreatedAt,
@@ -117,7 +118,7 @@ func (ur *SqliteResumeRepository) GetResumeByID(resumeID, userID string) (*model
 	return &r, nil
 }
 
-func (ur *SqliteResumeRepository) ToggleScheduling(resumeID, userID string, isScheduled bool) error {
+func (rr *SqliteResumeRepository) ToggleScheduling(resumeID, userID string, isScheduled bool) error {
 	scheduledValue := 0
 	if isScheduled {
 		scheduledValue = 1
@@ -125,10 +126,34 @@ func (ur *SqliteResumeRepository) ToggleScheduling(resumeID, userID string, isSc
 
 	query := `update resumes set is_scheduled = ? where id = ? and user_id = ?`
 
-	if _, err := ur.DB.Exec(query, scheduledValue, resumeID, userID); err != nil {
+	if _, err := rr.DB.Exec(query, scheduledValue, resumeID, userID); err != nil {
 		return err
 	}
 
 	return nil
 
+}
+
+func (rr *SqliteResumeRepository) DeleteResumesByUserID(resumes []model.Resume, userID string) error {
+	tx, err := rr.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare(`delete from resumes where id = ? and user_id = ?`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, resume := range resumes {
+		_, err := stmt.Exec(resume.ID, userID)
+		if err != nil {
+			return fmt.Errorf("failed to execute statement for resume ID %s: %w", resume.ID, err)
+		}
+	}
+	tx.Commit()
+
+	return nil
 }
