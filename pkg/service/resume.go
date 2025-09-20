@@ -9,6 +9,7 @@ type ResumeService interface {
 	CreateOrUpdateResumes(resumes []model.Resume, userID string) error
 	GetUserResumes(userID string) ([]model.Resume, error)
 	GetUserResume(resumeID, userID string) (*model.Resume, error)
+	DeleteUserResumes(resumes []model.Resume, userID string) error
 	ToggleResumeScheduling(resumeID, userID string, isScheduled bool) error
 }
 
@@ -34,4 +35,8 @@ func (rs *ResumeServiceImpl) GetUserResume(resumeID, userID string) (*model.Resu
 
 func (rs *ResumeServiceImpl) ToggleResumeScheduling(resumeID, userID string, isScheduled bool) error {
 	return rs.resumeRepo.ToggleScheduling(resumeID, userID, isScheduled)
+}
+
+func (rs *ResumeServiceImpl) DeleteUserResumes(resumes []model.Resume, userID string) error {
+	return rs.resumeRepo.DeleteResumesByUserID(resumes, userID)
 }
