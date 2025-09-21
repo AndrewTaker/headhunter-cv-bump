@@ -9,6 +9,7 @@ import (
 type TokenRepository interface {
 	CreateOrUpdateToken(token *model.Token, code, userID string) error
 	GetTokenByUserID(userID string) (*model.Token, error)
+	UpdateToken(accessToken, refreshToken, userID string) error
 }
 
 type SqliteTokenRepository struct {
@@ -58,4 +59,18 @@ func (tr *SqliteTokenRepository) GetTokenByUserID(userID string) (*model.Token, 
 	}
 
 	return &t, nil
+}
+
+func (tr *SqliteTokenRepository) UpdateToken(accessToken, refreshToken, userID string) error {
+	query := `
+	update tokens 
+	set access_token = ?, refresh_token = ?
+	where user_id = ?
+	`
+
+	if _, err := tr.DB.Exec(query, accessToken, refreshToken, userID); err != nil {
+		return err
+	}
+
+	return nil
 }
