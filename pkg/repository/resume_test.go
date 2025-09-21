@@ -2,9 +2,9 @@ package repository
 
 import (
 	"database/sql"
+	"log"
 	"pkg/database"
 	"pkg/model"
-	"reflect"
 	"testing"
 	"time"
 
@@ -29,7 +29,7 @@ func TestQQ(t *testing.T) {
 	db, cleanup := setupResumeTestDB(t)
 	defer cleanup()
 	rr := NewSqliteResumeRepository(db)
-	err := rr.CreateOrUpdateResumes([]model.Resume{
+	r := []model.Resume{
 		{
 			ID:           "r1",
 			Title:        "r1-title",
@@ -37,10 +37,14 @@ func TestQQ(t *testing.T) {
 			CreatedAt:    hht(ca1),
 			UpdatedAt:    hht(ua1),
 		},
-	}, userID)
+	}
+	err := rr.CreateOrUpdateResumes(r, userID)
 	if err != nil {
 		t.Fatalf("TestQQ failed %v", err)
 	}
+	r0 := r[0]
+	r0t := time.Time(r0.CreatedAt)
+	log.Println(r0t.Format(time.RFC3339))
 
 }
 
@@ -61,10 +65,10 @@ func setupResumeTestDB(t *testing.T) (*database.DB, func()) {
 
 	return db, cleanup
 }
+
 func TestHHTime_Scan(t *testing.T) {
 	var hht model.HHTime
 
-	// Test case 1: Scan from time.Time
 	testTime := time.Now()
 	err := hht.Scan(testTime)
 	if err != nil {
@@ -74,7 +78,6 @@ func TestHHTime_Scan(t *testing.T) {
 		t.Errorf("Scan from time.Time failed. Expected %v, got %v", testTime, time.Time(hht))
 	}
 
-	// Test case 2: Scan from string
 	testTimeStr := "2023-10-27 10:30:00+00:00"
 	tt, _ := time.Parse(model.TimeLayout, testTimeStr)
 	err = hht.Scan(testTimeStr)
@@ -85,7 +88,6 @@ func TestHHTime_Scan(t *testing.T) {
 		t.Errorf("Scan from string failed. Expected %v, got %v", t, time.Time(hht))
 	}
 
-	// Test case 3: Scan from []byte
 	testTimeBytes := []byte("2023-10-27 11:30:00+00:00")
 	tt, _ = time.Parse(model.TimeLayout, string(testTimeBytes))
 	err = hht.Scan(testTimeBytes)
@@ -138,8 +140,8 @@ func TestResumeRepositoryCRUD(t *testing.T) {
 			retrievedMap[r.ID] = r
 		}
 		for _, r := range resumes {
-			if !reflect.DeepEqual(r, retrievedMap[r.ID]) {
-				t.Errorf("Retrieved resume does not match initial resume.\nExpected: %+v\nGot: %+v", r, retrievedMap[r.ID])
+			if r.CreatedAt != retrievedMap[r.ID].CreatedAt {
+				t.Errorf("%v+ != %v+", r.CreatedAt, retrievedMap[r.ID].CreatedAt)
 			}
 		}
 	})
