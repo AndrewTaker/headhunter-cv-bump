@@ -8,19 +8,19 @@ import (
 
 type HHTime time.Time
 
-const timeLayout = "2006-01-02 15:04:05-07:00"
+const TimeLayout = "2006-01-02 15:04:05-07:00"
 
 func (hht *HHTime) Scan(value any) error {
 	switch v := value.(type) {
 	case string:
-		t, err := time.Parse(timeLayout, v)
+		t, err := time.Parse(TimeLayout, v)
 		if err != nil {
 			return err
 		}
 		*hht = HHTime(t)
 		return nil
 	case []byte:
-		t, err := time.Parse(timeLayout, string(v))
+		t, err := time.Parse(TimeLayout, string(v))
 		if err != nil {
 			return err
 		}
