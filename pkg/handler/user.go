@@ -2,7 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"pkg/headhunter"
 	"pkg/service"
 )
 
@@ -11,7 +10,11 @@ type UserHandler struct {
 }
 
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Response) {
-	ctx := r.Context()
+	user, err := h.userService.GetUser("60645454")
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
+	}
 
-	client := headhunter.NewHHClient(ctx)
+	w.Write([]byte(user.FirstName))
 }

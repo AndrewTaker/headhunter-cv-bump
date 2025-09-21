@@ -23,20 +23,20 @@ func (ss *SchedulerServiceImpl) GetSchedules() ([]model.JoinedScheduler, error) 
 	var err error
 
 	if schedules, err = ss.schedulerRepo.GetSchedules(); err != nil {
-		return schedules, nil
+		return schedules, err
 	}
 
-	for _, s := range schedules {
+	for i := range schedules {
 		var token model.Token
-		token.AccessToken = s.AccessToken
-		token.RefreshToken = s.RefreshToken
+		token.AccessToken = schedules[i].AccessToken
+		token.RefreshToken = schedules[i].RefreshToken
 
 		if err := token.Decrypt(); err != nil {
 			return schedules, err
 		}
 
-		s.AccessToken = token.AccessToken
-		s.RefreshToken = token.RefreshToken
+		schedules[i].AccessToken = token.AccessToken
+		schedules[i].RefreshToken = token.RefreshToken
 	}
 
 	return schedules, nil
