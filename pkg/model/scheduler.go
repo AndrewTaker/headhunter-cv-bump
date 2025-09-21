@@ -7,3 +7,11 @@ type Scheduler struct {
 	Timestamp   string
 	Error       string
 }
+
+type JoinedScheduler struct {
+	UserID       string
+	AccessToken  string
+	RefreshToken string
+	ResumeID     string
+	ResumeTitle  string
+}
