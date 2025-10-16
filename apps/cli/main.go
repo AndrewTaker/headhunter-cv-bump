@@ -2,10 +2,14 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"pkg/auth"
 	"pkg/database"
+	"pkg/handler"
 	"pkg/repository"
 	"pkg/service"
 
+	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -26,6 +30,19 @@ func main() {
 
 	sr := repository.NewSqliteSchedulerRepository(db)
 	ss := service.NewSchedulerService(sr)
+
+	ar := auth.NewAuthRepository()
+
+	router := mux.NewRouter()
+	userHandler := handler.NewUserHandler(us, ar)
+	authHandler := handler.NewAuthHandler(us, ts, rs, ar)
+	router.HandleFunc("/users", userHandler.GetUser).Methods("GET")
+	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
+	router.HandleFunc("/auth/callback", authHandler.Callback).Methods("GET")
+
+	log.Println("starting server at 44444")
+	log.Println("login: ", "http://localhost:44444/auth/login")
+	log.Fatal(http.ListenAndServe(":44444", router))
 
 	user, err := us.GetUser("60645454")
 	if err != nil {

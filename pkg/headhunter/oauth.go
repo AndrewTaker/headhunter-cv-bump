@@ -17,8 +17,8 @@ var HHOauthConfig = &oauth2.Config{
 	},
 }
 
-func GetAuthCodeURL() string {
-	return HHOauthConfig.AuthCodeURL("state", oauth2.AccessTypeOffline)
+func GetAuthCodeURL(state string) string {
+	return HHOauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline)
 }
 
 func ExchangeCodeForToken(ctx context.Context, code string) (*oauth2.Token, error) {
