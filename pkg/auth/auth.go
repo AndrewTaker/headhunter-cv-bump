@@ -78,6 +78,7 @@ func (ar *AuthRepository) cleanupExpiredTokens() {
 
 	for token, data := range ar.Session {
 		if now.After(data.ExpiresAt) {
+			log.Printf("[%s] [INFO] AuthRepository: deleting session for %s", now.Format(time.RFC3339), data.UserID)
 			delete(ar.Session, token)
 		}
 	}

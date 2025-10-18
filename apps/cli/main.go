@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"pkg/auth"
 	"pkg/database"
 	"pkg/handler"
@@ -14,13 +17,25 @@ import (
 )
 
 func main() {
-	db, err := database.NewSqliteDatabase("/home/pepega/pepehands/hh-cv/cvu-hh.db")
+	dbPath := os.Getenv("DB_PATH")
+	templatesPath := os.Getenv("TEMPLATES_PATH")
+
+	tmpl, err := template.ParseGlob(fmt.Sprintf("%s/*.html", templatesPath))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := os.Remove(dbPath); err != nil {
+		log.Fatal(err)
+	}
+
+	db, err := database.NewSqliteDatabase(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	ur := repository.NewSqliteUserRepository(db)
-	us := service.NewUserService(ur)
+	us := service.NewUserService(ur, tmpl)
 
 	tr := repository.NewSqliteTokenRepository(db)
 	ts := service.NewTokenService(tr)
@@ -28,50 +43,21 @@ func main() {
 	rr := repository.NewSqliteResumeRepository(db)
 	rs := service.NewResumeService(rr)
 
-	sr := repository.NewSqliteSchedulerRepository(db)
-	ss := service.NewSchedulerService(sr)
-
 	ar := auth.NewAuthRepository()
 
 	router := mux.NewRouter()
-	userHandler := handler.NewUserHandler(us, ar)
-	authHandler := handler.NewAuthHandler(us, ts, rs, ar)
-	router.HandleFunc("/users", userHandler.GetUser).Methods("GET")
+	userHandler := handler.NewUserHandler(ts, us, ar, tmpl)
+	authHandler := handler.NewAuthHandler(us, ts, rs, ar, tmpl)
+
+	router.HandleFunc("/", userHandler.GetUser).Methods("GET")
+
 	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
+	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
 	router.HandleFunc("/auth/callback", authHandler.Callback).Methods("GET")
+
+	router.HandleFunc("/ds/resumes", userHandler.GetResumes).Methods("GET")
 
 	log.Println("starting server at 44444")
 	log.Println("login: ", "http://localhost:44444/auth/login")
 	log.Fatal(http.ListenAndServe(":44444", router))
-
-	user, err := us.GetUser("60645454")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	usersToken, err := ts.GetToken(user.ID)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	usersResume, err := rs.GetUserResumes(user.ID)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	schedule, err := ss.GetSchedules()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println(user)
-	log.Println(usersToken)
-	for _, r := range usersResume {
-		log.Println(r.Title, r.ID)
-	}
-
-	log.Println("----------------------------------------------------")
-	for _, s := range schedule {
-		log.Println(s.AccessToken, s.RefreshToken, s.ResumeID)
-	}
 }

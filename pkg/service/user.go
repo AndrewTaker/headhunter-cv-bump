@@ -1,6 +1,7 @@
 package service
 
 import (
+	"html/template"
 	"pkg/model"
 	"pkg/repository"
 )
@@ -15,7 +16,7 @@ type UserServiceImpl struct {
 	userRepo repository.UserRepository
 }
 
-func NewUserService(ur repository.UserRepository) UserService {
+func NewUserService(ur repository.UserRepository, tmpl *template.Template) UserService {
 	return &UserServiceImpl{userRepo: ur}
 }
 

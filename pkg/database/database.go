@@ -38,8 +38,8 @@ var tables = `
 	create table if not exists tokens (
 		access_token text,
 		refresh_token text,
-		expires_in integer,
-		code text unique,
+		token_type text,
+		expiry integer,
 		user_id text unique,
 		
 		foreign key (user_id) references users(id) on delete cascade

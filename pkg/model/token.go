@@ -1,12 +1,16 @@
 package model
 
-import "pkg/utils"
+import (
+	"pkg/utils"
+	"time"
+
+	"golang.org/x/oauth2"
+)
 
 type Token struct {
 	AccessToken  string
 	RefreshToken string
-	ExpiresIn    uint
-	Code         string
+	Expiry       time.Time
 	TokenType    string
 }
 
@@ -36,4 +40,13 @@ func (t *Token) Decrypt() error {
 	}
 
 	return nil
+}
+
+func (t *Token) ToOauth2Token() *oauth2.Token {
+	return &oauth2.Token{
+		AccessToken:  t.AccessToken,
+		RefreshToken: t.RefreshToken,
+		TokenType:    t.TokenType,
+		Expiry:       t.Expiry,
+	}
 }

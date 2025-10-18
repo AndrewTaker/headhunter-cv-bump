@@ -1,15 +1,17 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"pkg/database"
 	"pkg/model"
+	"time"
 )
 
 type TokenRepository interface {
-	CreateOrUpdateToken(token *model.Token, code, userID string) error
-	GetTokenByUserID(userID string) (*model.Token, error)
-	UpdateToken(accessToken, refreshToken, userID string) error
+	GetTokenByUserID(ctx context.Context, userID string) (*model.Token, error)
+	SaveToken(ctx context.Context, token *model.Token, userID string) error
+	UpdateToken(ctx context.Context, token *model.Token, userID string) error
 }
 
 type SqliteTokenRepository struct {
@@ -20,21 +22,17 @@ func NewSqliteTokenRepository(db *database.DB) TokenRepository {
 	return &SqliteTokenRepository{DB: db}
 }
 
-func (tr *SqliteTokenRepository) CreateOrUpdateToken(token *model.Token, code, userID string) error {
+func (tr *SqliteTokenRepository) SaveToken(ctx context.Context, token *model.Token, userID string) error {
 	query := `
-	insert into tokens (access_token, refresh_token, expires_in, code, user_id) values (?, ?, ?, ?, ?)
-	on conflict(user_id) do update set
-	access_token = excluded.access_token,
-	refresh_token = excluded.refresh_token,
-	expires_in = excluded.expires_in,
-	code = excluded.code
+	insert into tokens (access_token, refresh_token, token_type, expiry, user_id)
+	values (?, ?, ?, ?, ?)
 	`
 
 	if _, err := tr.DB.Exec(query,
 		token.AccessToken,
 		token.RefreshToken,
-		token.ExpiresIn,
-		code,
+		token.TokenType,
+		token.Expiry.Unix(),
 		userID,
 	); err != nil {
 		return err
@@ -43,14 +41,16 @@ func (tr *SqliteTokenRepository) CreateOrUpdateToken(token *model.Token, code, u
 	return nil
 }
 
-func (tr *SqliteTokenRepository) GetTokenByUserID(userID string) (*model.Token, error) {
-	query := `select access_token, refresh_token, expires_in from tokens where user_id = ?`
+func (tr *SqliteTokenRepository) GetTokenByUserID(ctx context.Context, userID string) (*model.Token, error) {
+	query := `select access_token, refresh_token, token_type, expiry from tokens where user_id = ?`
 
 	var t model.Token
+	var e int64
 	if err := tr.DB.QueryRow(query, userID).Scan(
 		&t.AccessToken,
 		&t.RefreshToken,
-		&t.ExpiresIn,
+		&t.TokenType,
+		&e,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return &model.Token{}, err
@@ -58,17 +58,25 @@ func (tr *SqliteTokenRepository) GetTokenByUserID(userID string) (*model.Token, 
 		return nil, err
 	}
 
+	t.Expiry = time.Unix(e, 0)
 	return &t, nil
 }
 
-func (tr *SqliteTokenRepository) UpdateToken(accessToken, refreshToken, userID string) error {
+func (tr *SqliteTokenRepository) UpdateToken(ctx context.Context, token *model.Token, userID string) error {
 	query := `
 	update tokens 
-	set access_token = ?, refresh_token = ?
+	set access_token = ?, refresh_token = ?, token_type = ?, expiry = ?
 	where user_id = ?
 	`
 
-	if _, err := tr.DB.Exec(query, accessToken, refreshToken, userID); err != nil {
+	if _, err := tr.DB.Exec(
+		query,
+		token.AccessToken,
+		token.RefreshToken,
+		token.TokenType,
+		token.Expiry.Unix(),
+		userID,
+	); err != nil {
 		return err
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"pkg/auth"
@@ -23,14 +24,46 @@ type AuthHandler struct {
 	tokenService  service.TokenService
 	resumeService service.ResumeService
 	auth          *auth.AuthRepository
+	tmpl          *template.Template
 }
 
-func NewAuthHandler(us service.UserService, ts service.TokenService, rs service.ResumeService, auth *auth.AuthRepository) *AuthHandler {
-	return &AuthHandler{us, ts, rs, auth}
+func NewAuthHandler(
+	us service.UserService,
+	ts service.TokenService,
+	rs service.ResumeService,
+	auth *auth.AuthRepository,
+	tmpl *template.Template,
+) *AuthHandler {
+	return &AuthHandler{us, ts, rs, auth, tmpl}
+}
+
+func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("sess")
+	if err != nil {
+		http.Error(w, "Could not retrieve cookie", http.StatusBadRequest)
+		log.Println("cookie err", err)
+		return
+	}
+
+	h.auth.InvalidateToken(token.Value)
+	http.SetCookie(w, &http.Cookie{
+		Name:   "sess",
+		Value:  "",
+		MaxAge: -1,
+		Path:   "/",
+	})
+
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	state, err := utils.GenerateState(64)
+
+	http.SetCookie(w, &http.Cookie{
+		Name:   "sess",
+		Value:  "",
+		MaxAge: -1,
+	})
 
 	if err != nil {
 		http.Error(w, "Error generating state string", http.StatusBadRequest)
@@ -41,18 +74,12 @@ func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	states[state] = struct{}{}
 	stateMutex.Unlock()
 
-	http.Redirect(w, r, headhunter.GetAuthCodeURL(state), 200)
+	http.Redirect(w, r, headhunter.GetAuthCodeURL(state), http.StatusTemporaryRedirect)
 }
 
 func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	queryState := r.URL.Query().Get("state")
 	authCode := r.URL.Query().Get("code")
-
-	http.SetCookie(w, &http.Cookie{
-		Name:   "sess",
-		Value:  "",
-		MaxAge: -1,
-	})
 
 	if errorMsg := r.URL.Query().Get("error"); errorMsg != "" {
 		http.Error(w, fmt.Sprintf("Authorization failed: %s", errorMsg), http.StatusForbidden)
@@ -71,8 +98,6 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Could not exchange code for token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	log.Printf("Successfully obtained token: Expires in %v seconds", token.ExpiresIn)
 
 	client := headhunter.HHOauthConfig.Client(ctx, token)
 	resp, err := client.Get("https://api.hh.ru/me")
@@ -101,6 +126,19 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dbToken := model.Token{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		TokenType:    token.TokenType,
+		Expiry:       token.Expiry,
+	}
+
+	if err := h.tokenService.SaveToken(ctx, &dbToken, user.ID); err != nil {
+		log.Printf("Failed to save token to database: %v", err)
+		http.Error(w, "Failed to save token to database", http.StatusInternalServerError)
+		return
+	}
+
 	h.auth.StoreToken(user.ID, token.AccessToken)
 
 	http.SetCookie(w, &http.Cookie{
@@ -110,7 +148,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Path:    "/",
 	})
 
-	http.Redirect(w, r, "/users", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
 func validateStateToken(state string) bool {
