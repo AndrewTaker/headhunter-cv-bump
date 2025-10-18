@@ -1,0 +1,44 @@
+{{ define "index" }}
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="color-scheme" content="light dark">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+        <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+        <title>HH BUMP CV</title>
+    </head>
+    <body>
+        <header class="container">
+            <nav>
+                <ul>
+                    <li><strong>HeadHunter auto cv bump</strong></li>
+                </ul>
+                <ul>
+                    <li><a href="/dashboard" class="contrast">Home</a></li>
+                    {{ if .User }}
+                        <li><a href="/auth/logout">Log Out</a></li>
+                        <li><a href="#">Delete My Data</a></li>
+                    {{ else }}
+                        <li><a href="/auth/login">Log In</a></li>
+                    {{ end }}
+                </ul>
+            </nav>
+        </header>
+
+        <main class="container">
+            <p id="message"></p>
+            {{ if .Error }} {{ .Error }} {{ end }}
+            {{ if .User }}
+                <hgroup>
+                    <h1>{{ .User.LastName }} {{ .User.FirstName }}</h1>
+                    <p>{{ .User.ID }}
+                </hgroup>
+                <button data-on-click="@get('/ds/resumes')">get resumes</button>
+            {{ end }}
+            <section id="resumes"></section>
+        </main>
+    </body>
+</html>
+{{ end }}

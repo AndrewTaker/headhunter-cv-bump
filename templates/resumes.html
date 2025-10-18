@@ -1,0 +1,14 @@
+{{ define "resumes" }}
+<section id="resumes">
+    {{ range .Resumes }}
+        <article>
+            <header>
+                <hgroup>
+                    <h2>{{ .Title }}</h2>
+                    <p>{{ .AlternateURL }}</p>
+                </hgroup>
+            </header>
+        </article>
+    {{ end }}
+</section>
+{{ end }}
