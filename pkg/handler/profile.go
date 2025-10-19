@@ -18,23 +18,23 @@ type Store struct {
 	Count   int    `json:"count"`
 }
 
-type UserHandler struct {
+type ProfileHandler struct {
 	userService  service.UserService
 	tokenService service.TokenService
 	auth         *auth.AuthRepository
 	tmpl         *template.Template
 }
 
-func NewUserHandler(
+func NewProfileHandler(
 	ts service.TokenService,
 	us service.UserService,
 	auth *auth.AuthRepository,
 	tmpl *template.Template,
-) *UserHandler {
-	return &UserHandler{tokenService: ts, userService: us, auth: auth, tmpl: tmpl}
+) *ProfileHandler {
+	return &ProfileHandler{tokenService: ts, userService: us, auth: auth, tmpl: tmpl}
 }
 
-func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+func (h *ProfileHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	token, err := r.Cookie("sess")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -53,7 +53,7 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	h.tmpl.ExecuteTemplate(w, "index", map[string]any{"User": user})
 }
 
-func (h *UserHandler) GetResumes(w http.ResponseWriter, r *http.Request) {
+func (h *ProfileHandler) GetResumes(w http.ResponseWriter, r *http.Request) {
 	store := &Store{}
 	if err := datastar.ReadSignals(r, store); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

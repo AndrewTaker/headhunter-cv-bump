@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-func GenerateState(length int) (string, error) {
+func GenerateRandomString(length int) (string, error) {
 	b := make([]byte, length)
 	_, err := rand.Read(b)
 	if err != nil {

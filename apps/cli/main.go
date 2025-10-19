@@ -46,16 +46,16 @@ func main() {
 	ar := auth.NewAuthRepository()
 
 	router := mux.NewRouter()
-	userHandler := handler.NewUserHandler(ts, us, ar, tmpl)
+	profileHandler := handler.NewProfileHandler(ts, us, ar, tmpl)
 	authHandler := handler.NewAuthHandler(us, ts, rs, ar, tmpl)
 
-	router.HandleFunc("/", userHandler.GetUser).Methods("GET")
+	router.HandleFunc("/", profileHandler.GetUser).Methods("GET")
 
 	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
 	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
 	router.HandleFunc("/auth/callback", authHandler.Callback).Methods("GET")
 
-	router.HandleFunc("/ds/resumes", userHandler.GetResumes).Methods("GET")
+	router.HandleFunc("/ds/resumes", profileHandler.GetResumes).Methods("GET")
 
 	log.Println("starting server at 44444")
 	log.Println("login: ", "http://localhost:44444/auth/login")

@@ -57,7 +57,7 @@ func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
-	state, err := utils.GenerateState(64)
+	state, err := utils.GenerateRandomString(64)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:   "sess",
@@ -139,11 +139,18 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.auth.StoreToken(user.ID, token.AccessToken)
+	sessionToken, err := utils.GenerateRandomString(32)
+	if err != nil {
+		log.Printf("failed to generate random string %v", err)
+		http.Error(w, "failed to generate random string", http.StatusInternalServerError)
+		return
+	}
+
+	h.auth.StoreToken(user.ID, sessionToken)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:    "sess",
-		Value:   token.AccessToken,
+		Value:   sessionToken,
 		Expires: time.Now().Add(5 * time.Minute),
 		Path:    "/",
 	})
