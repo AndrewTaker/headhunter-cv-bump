@@ -1,14 +1,17 @@
 {{ define "resumes" }}
-<section id="resumes">
-    {{ range .Resumes }}
-        <article>
-            <header>
-                <hgroup>
-                    <h2>{{ .Title }}</h2>
-                    <p>{{ .AlternateURL }}</p>
-                </hgroup>
-            </header>
-        </article>
-    {{ end }}
-</section>
+    <section id="resumes">
+        {{ range .Resumes }}
+            <article style="width: 50%">
+                <header>
+                    <hgroup>
+                        <h2>{{ .Title }}</h2>
+                        <p>{{ .AlternateURL }}</p>
+                    </hgroup>
+                </header>
+                <footer>
+                    <button>Сохранить в базу и поставить в расписание на автоподнятие</button>
+                </footer>
+            </article>
+        {{ end }}
+    </section>
 {{ end }}

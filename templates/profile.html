@@ -1,4 +1,4 @@
-{{ define "index" }}
+{{ define "profile" }}
 <!doctype html>
 <html lang="ru">
     <head>
@@ -30,10 +30,19 @@
         </header>
 
         <main class="container">
-            <hgroup>
-                <h1>Автоподнятие резюме на HeadHunter бесплатно и без Pro-подписки</h1>
-                <p class="lead">Автоматическое поднятие каждые 4 часа. Это <em>бесплатная инициатива</em></p>
-            </hgroup>
+            <p id="message"></p>
+
+            {{ if .User }}
+                <section>
+                    <hgroup>
+                        <h1>{{ .User.LastName }} {{ .User.FirstName }}</h1>
+                        <p>{{ .User.ID }}
+                    </hgroup>
+                </section>
+                <section id="resumes">
+                    <button data-on-click="@get('/ds/resumes')">Получить список резюме</button>
+                </section>
+            {{ end }}
         </main>
     </body>
 </html>

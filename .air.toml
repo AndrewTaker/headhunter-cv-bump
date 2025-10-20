@@ -3,9 +3,9 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  args_bin = ["http", "localhost", "44444", "true"]
-  bin = ";export $(grep -v '^#' .env | xargs); .apps//web/bin/hhcv"
-  cmd = "go build -o ./web/bin/hhcv ./web"
+  args_bin = []
+  bin = ";export $(grep -v '^#' .env | xargs); ./apps/cli/bin/cli"
+  cmd = "go build -o ./apps/cli/bin/cli ./apps/cli/"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
   exclude_file = []

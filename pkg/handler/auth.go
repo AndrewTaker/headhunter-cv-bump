@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"pkg/auth"
@@ -24,7 +23,6 @@ type AuthHandler struct {
 	tokenService  service.TokenService
 	resumeService service.ResumeService
 	auth          *auth.AuthRepository
-	tmpl          *template.Template
 }
 
 func NewAuthHandler(
@@ -32,9 +30,15 @@ func NewAuthHandler(
 	ts service.TokenService,
 	rs service.ResumeService,
 	auth *auth.AuthRepository,
-	tmpl *template.Template,
 ) *AuthHandler {
-	return &AuthHandler{us, ts, rs, auth, tmpl}
+	return &AuthHandler{us, ts, rs, auth}
+}
+
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	u := model.User{ID: "1", FirstName: "QQQ", LastName: "WWW", MiddleName: "EQWEQE"}
+	data, _ := json.Marshal(u)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
@@ -47,10 +51,11 @@ func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 
 	h.auth.InvalidateToken(token.Value)
 	http.SetCookie(w, &http.Cookie{
-		Name:   "sess",
-		Value:  "",
-		MaxAge: -1,
-		Path:   "/",
+		Name:     "sess",
+		Value:    "",
+		MaxAge:   -1,
+		Path:     "/",
+		HttpOnly: true,
 	})
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
@@ -149,13 +154,14 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	h.auth.StoreToken(user.ID, sessionToken)
 
 	http.SetCookie(w, &http.Cookie{
-		Name:    "sess",
-		Value:   sessionToken,
-		Expires: time.Now().Add(5 * time.Minute),
-		Path:    "/",
+		Name:     "sess",
+		Value:    sessionToken,
+		Expires:  time.Now().Add(5 * time.Minute),
+		Path:     "/",
+		HttpOnly: true,
 	})
 
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "http://localhost:5173", http.StatusTemporaryRedirect)
 }
 
 func validateStateToken(state string) bool {

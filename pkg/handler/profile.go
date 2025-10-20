@@ -1,44 +1,41 @@
 package handler
 
 import (
-	"bytes"
 	"encoding/json"
-	"html/template"
+	"fmt"
 	"log"
 	"net/http"
 	"pkg/auth"
-	"pkg/headhunter"
+	"pkg/model"
 	"pkg/service"
-
-	"github.com/starfederation/datastar-go/datastar"
+	"strconv"
 )
 
-type Store struct {
-	Message string `json:"message"`
-	Count   int    `json:"count"`
-}
-
 type ProfileHandler struct {
-	userService  service.UserService
-	tokenService service.TokenService
-	auth         *auth.AuthRepository
-	tmpl         *template.Template
+	userService   service.UserService
+	tokenService  service.TokenService
+	resumeService service.ResumeService
+	auth          *auth.AuthRepository
 }
 
 func NewProfileHandler(
 	ts service.TokenService,
 	us service.UserService,
 	auth *auth.AuthRepository,
-	tmpl *template.Template,
+	rs service.ResumeService,
 ) *ProfileHandler {
-	return &ProfileHandler{tokenService: ts, userService: us, auth: auth, tmpl: tmpl}
+	return &ProfileHandler{
+		tokenService:  ts,
+		userService:   us,
+		auth:          auth,
+		resumeService: rs,
+	}
 }
 
-func (h *ProfileHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+func (h *ProfileHandler) Profile(w http.ResponseWriter, r *http.Request) {
 	token, err := r.Cookie("sess")
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		h.tmpl.ExecuteTemplate(w, "index", map[string]string{"Error": "not logged in"})
 		log.Println("cookie err", err)
 		return
 	}
@@ -46,73 +43,68 @@ func (h *ProfileHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := h.auth.GetUserByToken(token.Value)
 	user, err := h.userService.GetUser(userID)
 	if err != nil {
-		h.tmpl.ExecuteTemplate(w, "index", map[string]string{"Error": err.Error()})
 		return
 	}
 
-	h.tmpl.ExecuteTemplate(w, "index", map[string]any{"User": user})
+	resumes, err := h.resumeService.GetUserResumes(userID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Println("db err", err)
+		return
+	}
+
+	log.Println(user, resumes)
 }
 
 func (h *ProfileHandler) GetResumes(w http.ResponseWriter, r *http.Request) {
-	store := &Store{}
-	if err := datastar.ReadSignals(r, store); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	var resumes []model.Resume
+
+	for i := range 10 {
+		s := strconv.Itoa(i)
+		resumes = append(resumes, model.Resume{
+			ID:           s,
+			AlternateUrl: fmt.Sprintf("https://localhost.com/api/%s", s),
+			Title:        fmt.Sprintf("title for resumes %s", s),
+		})
 	}
 
-	token, err := r.Cookie("sess")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		h.tmpl.ExecuteTemplate(w, "index", map[string]string{"Error": "not logged in"})
-		log.Println("cookie err", err)
-		return
-	}
+	w.Header().Set("Content-Type", "application/json")
+	data, _ := json.Marshal(resumes)
+	w.Write(data)
 
-	userID := h.auth.GetUserByToken(token.Value)
-	// user, err := h.userService.GetUser(userID)
+	// token, err := r.Cookie("sess")
 	// if err != nil {
-	// 	h.tmpl.ExecuteTemplate(w, "index", map[string]string{"Error": err.Error()})
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	log.Println("cookie err", err)
 	// 	return
 	// }
-
-	dbToken, err := h.tokenService.GetTokenByUserID(r.Context(), userID)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		h.tmpl.ExecuteTemplate(w, "index", map[string]string{"Error": "not logged in"})
-		log.Println("db err", err)
-		return
-	}
-
-	oauth2Token := dbToken.ToOauth2Token()
-
-	client := headhunter.HHOauthConfig.Client(r.Context(), oauth2Token)
-	resp, err := client.Get("https://api.hh.ru/resumes/mine")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		h.tmpl.ExecuteTemplate(w, "index", map[string]string{"Error": "not logged in"})
-		log.Println("db err", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	type hhResumesResponse struct {
-		Items []headhunter.Resume `json:"items"`
-	}
-	var hhr hhResumesResponse
-	err = json.NewDecoder(resp.Body).Decode(&hhr)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		h.tmpl.ExecuteTemplate(w, "index", map[string]string{"Error": "not logged in"})
-		log.Println("db err", err)
-		return
-	}
-
-	sse := datastar.NewSSE(w, r)
-
-	var t bytes.Buffer
-	err = h.tmpl.ExecuteTemplate(&t, "resumes", map[string]any{"Resumes": hhr.Items})
-	if err != nil {
-		log.Println("template err", err)
-	}
-	sse.PatchElements(t.String())
+	//
+	// userID := h.auth.GetUserByToken(token.Value)
+	//
+	// dbToken, err := h.tokenService.GetTokenByUserID(r.Context(), userID)
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	log.Println("db err", err)
+	// 	return
+	// }
+	//
+	// oauth2Token := dbToken.ToOauth2Token()
+	//
+	// client := headhunter.HHOauthConfig.Client(r.Context(), oauth2Token)
+	// resp, err := client.Get("https://api.hh.ru/resumes/mine")
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	log.Println("db err", err)
+	// 	return
+	// }
+	// defer resp.Body.Close()
+	//
+	// resumes, err := h.resumeService.GetUserResumes(userID)
+	// if err != nil {
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	log.Println("db err", err)
+	// 	return
+	// }
+	//
+	// log.Println(resumes)
 }

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -14,16 +12,12 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/rs/cors"
 )
 
 func main() {
+	log.Println("test")
 	dbPath := os.Getenv("DB_PATH")
-	templatesPath := os.Getenv("TEMPLATES_PATH")
-
-	tmpl, err := template.ParseGlob(fmt.Sprintf("%s/*.html", templatesPath))
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	if err := os.Remove(dbPath); err != nil {
 		log.Fatal(err)
@@ -35,7 +29,7 @@ func main() {
 	}
 
 	ur := repository.NewSqliteUserRepository(db)
-	us := service.NewUserService(ur, tmpl)
+	us := service.NewUserService(ur)
 
 	tr := repository.NewSqliteTokenRepository(db)
 	ts := service.NewTokenService(tr)
@@ -46,18 +40,28 @@ func main() {
 	ar := auth.NewAuthRepository()
 
 	router := mux.NewRouter()
-	profileHandler := handler.NewProfileHandler(ts, us, ar, tmpl)
-	authHandler := handler.NewAuthHandler(us, ts, rs, ar, tmpl)
+	profileHandler := handler.NewProfileHandler(ts, us, ar, rs)
+	authHandler := handler.NewAuthHandler(us, ts, rs, ar)
 
-	router.HandleFunc("/", profileHandler.GetUser).Methods("GET")
+	router.HandleFunc("/profile", profileHandler.Profile).Methods("GET")
+	router.HandleFunc("/me", authHandler.Me).Methods("GET")
 
 	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
 	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
 	router.HandleFunc("/auth/callback", authHandler.Callback).Methods("GET")
 
-	router.HandleFunc("/ds/resumes", profileHandler.GetResumes).Methods("GET")
+	router.HandleFunc("/resumes", profileHandler.GetResumes).Methods("GET")
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+		Debug:            false,
+	})
+	handlerWithCORS := c.Handler(router)
 
 	log.Println("starting server at 44444")
 	log.Println("login: ", "http://localhost:44444/auth/login")
-	log.Fatal(http.ListenAndServe(":44444", router))
+	log.Fatal(http.ListenAndServe(":44444", handlerWithCORS))
 }

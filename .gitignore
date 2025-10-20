@@ -4,7 +4,9 @@ creds/
 *.json
 apps/web/bin/hhcv
 apps/scheduler/bin/hhcv-scheduler
+apps/cli/bin/cli
 *.sh
 *.service
 .env
 tmp/
+node_modules
