@@ -152,7 +152,7 @@ func (sr *SqliteRepository) ResumeDeleteByUserID(resumes []model.Resume, userID 
 	return nil
 }
 
-func (sr *SqliteUserRepository) UserCreateOrUpdate(user *model.User) error {
+func (sr *SqliteRepository) UserCreateOrUpdate(user *model.User) error {
 	query := `
 	insert into users (id, first_name, last_name, middle_name) values (?, ?, ?, ?)
 	on conflict(id) do update set
@@ -173,7 +173,7 @@ func (sr *SqliteUserRepository) UserCreateOrUpdate(user *model.User) error {
 	return nil
 }
 
-func (sr *SqliteUserRepository) UserGetByID(id string) (*model.User, error) {
+func (sr *SqliteRepository) UserGetByID(id string) (*model.User, error) {
 	query := `select id, first_name, last_name, middle_name from users where id = ?`
 
 	var u model.User
@@ -192,7 +192,7 @@ func (sr *SqliteUserRepository) UserGetByID(id string) (*model.User, error) {
 	return &u, nil
 }
 
-func (sr *SqliteUserRepository) UserDeleteByID(id string) error {
+func (sr *SqliteRepository) UserDeleteByID(id string) error {
 	query := `delete from users where id = ?`
 
 	if _, err := sr.DB.Exec(query, id); err != nil {
@@ -202,7 +202,7 @@ func (sr *SqliteUserRepository) UserDeleteByID(id string) error {
 	return nil
 }
 
-func (sr *SqliteSchedulerRepository) ScheduleGetBatch() ([]model.JoinedScheduler, error) {
+func (sr *SqliteRepository) ScheduleGetBatch() ([]model.JoinedScheduler, error) {
 	query := `
 	select users.id, tokens.access_token, tokens.refresh_token, resumes.id, resumes.title
 	from users
@@ -233,7 +233,7 @@ func (sr *SqliteSchedulerRepository) ScheduleGetBatch() ([]model.JoinedScheduler
 	return data, nil
 }
 
-func (sr *SqliteSchedulerRepository) ScheduleSave(s model.JoinedScheduler, timestamp, errors string) error {
+func (sr *SqliteRepository) ScheduleSave(s model.JoinedScheduler, timestamp, errors string) error {
 	query := `
 	insert into scheduler (user_id, resume_id, resume_title, timestamp, error)
 	values (?, ?, ?, ?, ?)
@@ -246,7 +246,7 @@ func (sr *SqliteSchedulerRepository) ScheduleSave(s model.JoinedScheduler, times
 	return nil
 }
 
-func (tr *SqliteTokenRepository) TokenSave(ctx context.Context, token *model.Token, userID string) error {
+func (tr *SqliteRepository) TokenSave(ctx context.Context, token *model.Token, userID string) error {
 	query := `
 	insert into tokens (access_token, refresh_token, token_type, expiry, user_id)
 	values (?, ?, ?, ?, ?)
@@ -265,7 +265,7 @@ func (tr *SqliteTokenRepository) TokenSave(ctx context.Context, token *model.Tok
 	return nil
 }
 
-func (sr *SqliteTokenRepository) TokenGetByUserID(ctx context.Context, userID string) (*model.Token, error) {
+func (sr *SqliteRepository) TokenGetByUserID(ctx context.Context, userID string) (*model.Token, error) {
 	query := `select access_token, refresh_token, token_type, expiry from tokens where user_id = ?`
 
 	var t model.Token
@@ -286,7 +286,7 @@ func (sr *SqliteTokenRepository) TokenGetByUserID(ctx context.Context, userID st
 	return &t, nil
 }
 
-func (sr *SqliteTokenRepository) TokenUpdate(ctx context.Context, token *model.Token, userID string) error {
+func (sr *SqliteRepository) TokenUpdate(ctx context.Context, token *model.Token, userID string) error {
 	query := `
 	update tokens
 	set access_token = ?, refresh_token = ?, token_type = ?, expiry = ?
