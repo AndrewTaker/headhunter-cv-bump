@@ -117,3 +117,9 @@ type User struct {
 	LastName   string
 	MiddleName string
 }
+
+type Session struct {
+	SessID    string
+	ExpiresAt time.Time
+	UserID    string
+}

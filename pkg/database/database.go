@@ -64,4 +64,12 @@ var tables = `
 		timestamp text,
 		error text
 	);
+
+	create table if not exists session (
+		sess_id text,
+		expires_at text,
+		user_id text
+
+		foreign key (user_id) references users(id) on delete cascade
+	);
 `
