@@ -12,23 +12,14 @@ import (
 )
 
 type ProfileHandler struct {
-	userService   service.UserService
-	tokenService  service.TokenService
-	resumeService service.ResumeService
-	auth          *auth.AuthRepository
+	service *service.SqliteService
+	auth    *auth.AuthRepository
 }
 
-func NewProfileHandler(
-	ts service.TokenService,
-	us service.UserService,
-	auth *auth.AuthRepository,
-	rs service.ResumeService,
-) *ProfileHandler {
+func NewProfileHandler(s *service.SqliteService, a *auth.AuthRepository) *ProfileHandler {
 	return &ProfileHandler{
-		tokenService:  ts,
-		userService:   us,
-		auth:          auth,
-		resumeService: rs,
+		service: s,
+		auth:    a,
 	}
 }
 
@@ -41,12 +32,12 @@ func (h *ProfileHandler) Profile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.auth.GetUserByToken(token.Value)
-	user, err := h.userService.GetUser(userID)
+	user, err := h.service.GetUser(userID)
 	if err != nil {
 		return
 	}
 
-	resumes, err := h.resumeService.GetUserResumes(userID)
+	resumes, err := h.service.GetUserResumes(userID)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Println("db err", err)

@@ -8,10 +8,10 @@ import (
 )
 
 type SqliteService struct {
-	repo repository.SqliteRepository
+	repo *repository.SqliteRepository
 }
 
-func NewResumeService(r repository.SqliteRepository) *SqliteService {
+func NewSqliteService(r *repository.SqliteRepository) *SqliteService {
 	return &SqliteService{repo: r}
 }
 

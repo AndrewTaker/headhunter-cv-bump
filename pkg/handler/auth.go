@@ -19,19 +19,12 @@ var states = make(map[string]struct{})
 var stateMutex sync.Mutex
 
 type AuthHandler struct {
-	userService   service.UserService
-	tokenService  service.TokenService
-	resumeService service.ResumeService
-	auth          *auth.AuthRepository
+	service *service.SqliteService
+	auth    *auth.AuthRepository
 }
 
-func NewAuthHandler(
-	us service.UserService,
-	ts service.TokenService,
-	rs service.ResumeService,
-	auth *auth.AuthRepository,
-) *AuthHandler {
-	return &AuthHandler{us, ts, rs, auth}
+func NewAuthHandler(s *service.SqliteService, a *auth.AuthRepository) *AuthHandler {
+	return &AuthHandler{service: s, auth: a}
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +41,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := h.auth.GetUserByToken(token.Value)
-	user, err := h.userService.GetUser(userID)
+	user, err := h.service.GetUser(userID)
 	if err != nil {
 		http.Error(w, "could not get user from db", http.StatusInternalServerError)
 		return
@@ -154,7 +147,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userService.CreateOrUpdateUser(&model.User{ID: user.ID, FirstName: user.FirstName, LastName: user.LastName, MiddleName: user.MiddleName}); err != nil {
+	if err := h.service.CreateOrUpdateUser(&model.User{ID: user.ID, FirstName: user.FirstName, LastName: user.LastName, MiddleName: user.MiddleName}); err != nil {
 		log.Printf("Failed to save user to database: %v", err)
 		http.Error(w, "Failed to save user to database", http.StatusInternalServerError)
 		return
@@ -167,7 +160,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Expiry:       token.Expiry,
 	}
 
-	tokenInDB, err := h.tokenService.GetTokenByUserID(r.Context(), user.ID)
+	tokenInDB, err := h.service.GetTokenByUserID(r.Context(), user.ID)
 	if err != nil {
 		log.Printf("GetTokenByUserID: Failed to save token to database: %v", err)
 		http.Error(w, "Failed to save token to database", http.StatusInternalServerError)
@@ -176,13 +169,13 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	// save if exists else update
 	if tokenInDB == nil {
-		if err := h.tokenService.SaveToken(ctx, &dbToken, user.ID); err != nil {
+		if err := h.service.SaveToken(ctx, &dbToken, user.ID); err != nil {
 			log.Printf("SaveToken: Failed to save token to database: %v", err)
 			http.Error(w, "Failed to save token to database", http.StatusInternalServerError)
 			return
 		}
 	} else {
-		if err := h.tokenService.UpdateToken(ctx, &dbToken, user.ID); err != nil {
+		if err := h.service.UpdateToken(ctx, &dbToken, user.ID); err != nil {
 			log.Printf("UpdateToken: Failed to save update token to database: %v", err)
 			http.Error(w, "Failed to update token to database", http.StatusInternalServerError)
 			return

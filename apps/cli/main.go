@@ -28,20 +28,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ur := repository.NewSqliteUserRepository(db)
-	us := service.NewUserService(ur)
-
-	tr := repository.NewSqliteTokenRepository(db)
-	ts := service.NewTokenService(tr)
-
-	rr := repository.NewSqliteResumeRepository(db)
-	rs := service.NewResumeService(rr)
-
-	ar := auth.NewAuthRepository()
+	repository := repository.NewSqliteRepository(db)
+	service := service.NewSqliteService(repository)
+	auth := auth.NewAuthRepository()
 
 	router := mux.NewRouter()
-	profileHandler := handler.NewProfileHandler(ts, us, ar, rs)
-	authHandler := handler.NewAuthHandler(us, ts, rs, ar)
+	authHandler := handler.NewAuthHandler(service, auth)
+	profileHandler := handler.NewProfileHandler(service, auth)
 
 	router.HandleFunc("/profile", profileHandler.Profile).Methods("GET")
 	router.HandleFunc("/me", authHandler.Me).Methods("GET")
@@ -53,7 +46,7 @@ func main() {
 	router.HandleFunc("/resumes", profileHandler.GetResumes).Methods("GET")
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{"http://localhost:5173"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
