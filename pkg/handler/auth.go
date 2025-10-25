@@ -20,11 +20,10 @@ var stateMutex sync.Mutex
 
 type AuthHandler struct {
 	service *service.SqliteService
-	auth    *auth.AuthRepository
 }
 
 func NewAuthHandler(s *service.SqliteService, a *auth.AuthRepository) *AuthHandler {
-	return &AuthHandler{service: s, auth: a}
+	return &AuthHandler{service: s}
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {

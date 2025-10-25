@@ -173,6 +173,25 @@ func (sr *SqliteRepository) UserCreateOrUpdate(user *model.User) error {
 	return nil
 }
 
+func (sr *SqliteRepository) UserGetBySessionID(ctx context.Context, sessID string) (*model.User, error) {
+	query := `
+	select id, first_name, last_name, middle name from users
+	where id = (select user_id from session where id = ?)
+	`
+
+	var u model.User
+	if err := sr.DB.QueryRow(query, sessID).Scan(
+		&u.ID,
+		&u.FirstName,
+		&u.LastName,
+		&u.MiddleName,
+		&u.LastName,
+	); err != nil {
+		return nil, err
+	}
+
+	return &u, nil
+}
 func (sr *SqliteRepository) UserGetByID(id string) (*model.User, error) {
 	query := `select id, first_name, last_name, middle_name from users where id = ?`
 
@@ -246,17 +265,17 @@ func (sr *SqliteRepository) ScheduleSave(s model.JoinedScheduler, timestamp, err
 	return nil
 }
 
-func (tr *SqliteRepository) TokenSave(ctx context.Context, token *model.Token, userID string) error {
+func (tr *SqliteRepository) TokenSaveOrCreate(ctx context.Context, token *model.Token, userID string) error {
 	query := `
-	insert into tokens (access_token, refresh_token, token_type, expiry, user_id)
-	values (?, ?, ?, ?, ?)
+	insert into tokens (access_token, refresh_token, user_id) values (?, ?, ?)
+	on conflict(user_id) do update set
+	access_token = excluded.access_token,
+	refresh_token = excluded.refresh_token
 	`
 
 	if _, err := tr.DB.Exec(query,
 		token.AccessToken,
 		token.RefreshToken,
-		token.TokenType,
-		token.Expiry.Unix(),
 		userID,
 	); err != nil {
 		return err
@@ -266,15 +285,12 @@ func (tr *SqliteRepository) TokenSave(ctx context.Context, token *model.Token, u
 }
 
 func (sr *SqliteRepository) TokenGetByUserID(ctx context.Context, userID string) (*model.Token, error) {
-	query := `select access_token, refresh_token, token_type, expiry from tokens where user_id = ?`
+	query := `select access_token, refresh_token from tokens where user_id = ?`
 
 	var t model.Token
-	var e int64
 	if err := sr.DB.QueryRow(query, userID).Scan(
 		&t.AccessToken,
 		&t.RefreshToken,
-		&t.TokenType,
-		&e,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, err
@@ -282,25 +298,27 @@ func (sr *SqliteRepository) TokenGetByUserID(ctx context.Context, userID string)
 		return nil, err
 	}
 
-	t.Expiry = time.Unix(e, 0)
 	return &t, nil
 }
 
-func (sr *SqliteRepository) TokenUpdate(ctx context.Context, token *model.Token, userID string) error {
+func (sr *SqliteRepository) SessionSave(ctx context.Context, sessID, userID string, expiresAt time.Time) error {
 	query := `
-	update tokens
-	set access_token = ?, refresh_token = ?, token_type = ?, expiry = ?
-	where user_id = ?
+	insert into session (id, expires_at, user_id) values (?, ?, ?)
 	`
 
-	if _, err := sr.DB.Exec(
-		query,
-		token.AccessToken,
-		token.RefreshToken,
-		token.TokenType,
-		token.Expiry.Unix(),
-		userID,
-	); err != nil {
+	if _, err := sr.DB.Exec(query, sessID, expiresAt, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sr *SqliteRepository) SessionDelete(ctx context.Context, sessID, userID string) error {
+	query := `
+	delete from session where id = ? and user_id = ?
+	`
+
+	if _, err := sr.DB.Exec(query, sessID, userID); err != nil {
 		return err
 	}
 

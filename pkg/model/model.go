@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"pkg/utils"
 	"time"
-
-	"golang.org/x/oauth2"
 )
 
 type HHTime time.Time
@@ -70,8 +68,6 @@ type JoinedScheduler struct {
 type Token struct {
 	AccessToken  string
 	RefreshToken string
-	Expiry       time.Time
-	TokenType    string
 }
 
 func (t *Token) Encrypt() error {
@@ -102,15 +98,6 @@ func (t *Token) Decrypt() error {
 	return nil
 }
 
-func (t *Token) ToOauth2Token() *oauth2.Token {
-	return &oauth2.Token{
-		AccessToken:  t.AccessToken,
-		RefreshToken: t.RefreshToken,
-		TokenType:    t.TokenType,
-		Expiry:       t.Expiry,
-	}
-}
-
 type User struct {
 	ID         string
 	FirstName  string
@@ -119,7 +106,7 @@ type User struct {
 }
 
 type Session struct {
-	SessID    string
+	ID        string
 	ExpiresAt time.Time
 	UserID    string
 }
