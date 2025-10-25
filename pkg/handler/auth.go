@@ -35,8 +35,37 @@ func NewAuthHandler(
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	u := model.User{ID: "1", FirstName: "QQQ", LastName: "WWW", MiddleName: "EQWEQE"}
-	data, _ := json.Marshal(u)
+	token, err := r.Cookie("sess")
+	if err != nil {
+		http.Error(w, "Could not retrieve cookie", http.StatusForbidden)
+		log.Println("cookie err", err)
+		return
+	}
+
+	if !h.auth.IsPresent(token.Value) {
+		http.Error(w, "Not authorized", http.StatusForbidden)
+		return
+	}
+
+	userID := h.auth.GetUserByToken(token.Value)
+	user, err := h.userService.GetUser(userID)
+	if err != nil {
+		http.Error(w, "could not get user from db", http.StatusInternalServerError)
+		return
+	}
+
+	ur := struct {
+		ID         string `json:"id"`
+		FirstName  string `json:"first_name"`
+		LastName   string `json:"last_name"`
+		MiddleName string `json:"middle_name"`
+	}{
+		ID:         user.ID,
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		MiddleName: user.MiddleName,
+	}
+	data, _ := json.Marshal(ur)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }
@@ -58,7 +87,7 @@ func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, "http://localhost:5173", http.StatusTemporaryRedirect)
 }
 
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
@@ -138,10 +167,26 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Expiry:       token.Expiry,
 	}
 
-	if err := h.tokenService.SaveToken(ctx, &dbToken, user.ID); err != nil {
-		log.Printf("Failed to save token to database: %v", err)
+	tokenInDB, err := h.tokenService.GetTokenByUserID(r.Context(), user.ID)
+	if err != nil {
+		log.Printf("GetTokenByUserID: Failed to save token to database: %v", err)
 		http.Error(w, "Failed to save token to database", http.StatusInternalServerError)
 		return
+	}
+
+	// save if exists else update
+	if tokenInDB == nil {
+		if err := h.tokenService.SaveToken(ctx, &dbToken, user.ID); err != nil {
+			log.Printf("SaveToken: Failed to save token to database: %v", err)
+			http.Error(w, "Failed to save token to database", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		if err := h.tokenService.UpdateToken(ctx, &dbToken, user.ID); err != nil {
+			log.Printf("UpdateToken: Failed to save update token to database: %v", err)
+			http.Error(w, "Failed to update token to database", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	sessionToken, err := utils.GenerateRandomString(32)
@@ -156,7 +201,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "sess",
 		Value:    sessionToken,
-		Expires:  time.Now().Add(5 * time.Minute),
+		Expires:  time.Now().Add(60 * time.Minute),
 		Path:     "/",
 		HttpOnly: true,
 	})

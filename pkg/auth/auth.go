@@ -17,7 +17,7 @@ type AuthRepository struct {
 	Session map[string]SessionData
 }
 
-const TokenTTL = 5 * time.Minute
+const TokenTTL = 60 * time.Minute
 const CleanupInterval = 1 * time.Minute
 
 func NewAuthRepository() *AuthRepository {

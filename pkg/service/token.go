@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"pkg/model"
@@ -43,6 +44,9 @@ func (ts *TokenServiceImpl) UpdateToken(ctx context.Context, token *model.Token,
 func (ts *TokenServiceImpl) GetTokenByUserID(ctx context.Context, userID string) (*model.Token, error) {
 	token, err := ts.tokenRepo.GetTokenByUserID(ctx, userID)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 

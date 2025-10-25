@@ -1,29 +1,23 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"pkg/database"
 	"pkg/model"
+	"time"
 )
 
-type ResumeRepository interface {
-	CreateOrUpdateResumes(resumes []model.Resume, userID string) error
-	GetUserResumes(userID string) ([]model.Resume, error)
-	GetResumeByID(resumeID, userID string) (*model.Resume, error)
-	ToggleScheduling(resumeID, userID string, isScheduled bool) error
-	DeleteResumesByUserID(resumes []model.Resume, userID string) error
-}
-
-type SqliteResumeRepository struct {
+type SqliteRepository struct {
 	DB *database.DB
 }
 
-func NewSqliteResumeRepository(db *database.DB) ResumeRepository {
-	return &SqliteResumeRepository{DB: db}
+func NewSqliteRepository(db *database.DB) *SqliteRepository {
+	return &SqliteRepository{DB: db}
 }
 
-func (rr *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, userID string) error {
+func (sr *SqliteRepository) ResumeCreateOrUpdateBatch(resumes []model.Resume, userID string) error {
 	query := `
 	insert into resumes (id, title, alternate_url, created_at, updated_at, user_id) values (?, ?, ?, ?, ?, ?)
 	on conflict(id) do update set
@@ -33,7 +27,7 @@ func (rr *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, 
 	updated_at = excluded.updated_at,
 	user_id = excluded.user_id;
 	`
-	tx, err := rr.DB.Begin()
+	tx, err := sr.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -63,10 +57,10 @@ func (rr *SqliteResumeRepository) CreateOrUpdateResumes(resumes []model.Resume, 
 	return nil
 }
 
-func (rr *SqliteResumeRepository) GetUserResumes(userID string) ([]model.Resume, error) {
+func (sr *SqliteRepository) ResumeGetByUserIDBatch(userID string) ([]model.Resume, error) {
 	query := "select id, title, alternate_url, created_at, updated_at, is_scheduled from resumes where user_id = ?"
 
-	rows, err := rr.DB.Query(query, userID)
+	rows, err := sr.DB.Query(query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,11 +92,11 @@ func (rr *SqliteResumeRepository) GetUserResumes(userID string) ([]model.Resume,
 	return resumes, nil
 }
 
-func (rr *SqliteResumeRepository) GetResumeByID(resumeID, userID string) (*model.Resume, error) {
+func (sr *SqliteRepository) ResumeGetByID(resumeID, userID string) (*model.Resume, error) {
 	query := `select id, title, created_at, updated_at, is_scheduled from resumes where id = ? and user_id = ?`
 
 	var r model.Resume
-	if err := rr.DB.QueryRow(query, resumeID, userID).Scan(
+	if err := sr.DB.QueryRow(query, resumeID, userID).Scan(
 		&r.ID,
 		&r.Title,
 		&r.CreatedAt,
@@ -118,7 +112,7 @@ func (rr *SqliteResumeRepository) GetResumeByID(resumeID, userID string) (*model
 	return &r, nil
 }
 
-func (rr *SqliteResumeRepository) ToggleScheduling(resumeID, userID string, isScheduled bool) error {
+func (sr *SqliteRepository) ResumeToggleScheduling(resumeID, userID string, isScheduled bool) error {
 	scheduledValue := 0
 	if isScheduled {
 		scheduledValue = 1
@@ -126,7 +120,7 @@ func (rr *SqliteResumeRepository) ToggleScheduling(resumeID, userID string, isSc
 
 	query := `update resumes set is_scheduled = ? where id = ? and user_id = ?`
 
-	if _, err := rr.DB.Exec(query, scheduledValue, resumeID, userID); err != nil {
+	if _, err := sr.DB.Exec(query, scheduledValue, resumeID, userID); err != nil {
 		return err
 	}
 
@@ -134,8 +128,8 @@ func (rr *SqliteResumeRepository) ToggleScheduling(resumeID, userID string, isSc
 
 }
 
-func (rr *SqliteResumeRepository) DeleteResumesByUserID(resumes []model.Resume, userID string) error {
-	tx, err := rr.DB.Begin()
+func (sr *SqliteRepository) ResumeDeleteByUserID(resumes []model.Resume, userID string) error {
+	tx, err := sr.DB.Begin()
 	if err != nil {
 		return err
 	}
@@ -154,6 +148,161 @@ func (rr *SqliteResumeRepository) DeleteResumesByUserID(resumes []model.Resume, 
 		}
 	}
 	tx.Commit()
+
+	return nil
+}
+
+func (sr *SqliteUserRepository) UserCreateOrUpdate(user *model.User) error {
+	query := `
+	insert into users (id, first_name, last_name, middle_name) values (?, ?, ?, ?)
+	on conflict(id) do update set
+	first_name = excluded.first_name,
+	last_name = excluded.last_name,
+	middle_name = excluded.middle_name
+	`
+
+	if _, err := sr.DB.Exec(query,
+		user.ID,
+		user.FirstName,
+		user.LastName,
+		user.MiddleName,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sr *SqliteUserRepository) UserGetByID(id string) (*model.User, error) {
+	query := `select id, first_name, last_name, middle_name from users where id = ?`
+
+	var u model.User
+	if err := sr.DB.QueryRow(query, id).Scan(
+		&u.ID,
+		&u.FirstName,
+		&u.LastName,
+		&u.MiddleName,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return &model.User{}, nil
+		}
+		return nil, err
+	}
+
+	return &u, nil
+}
+
+func (sr *SqliteUserRepository) UserDeleteByID(id string) error {
+	query := `delete from users where id = ?`
+
+	if _, err := sr.DB.Exec(query, id); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sr *SqliteSchedulerRepository) ScheduleGetBatch() ([]model.JoinedScheduler, error) {
+	query := `
+	select users.id, tokens.access_token, tokens.refresh_token, resumes.id, resumes.title
+	from users
+	join tokens on users.id = tokens.user_id
+	join resumes on users.id = resumes.user_id
+	`
+	rows, err := sr.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	var data []model.JoinedScheduler
+	for rows.Next() {
+		var s model.JoinedScheduler
+		if err := rows.Scan(
+			&s.UserID,
+			&s.AccessToken,
+			&s.RefreshToken,
+			&s.ResumeID,
+			&s.ResumeTitle,
+		); err != nil {
+			return nil, err
+		}
+
+		data = append(data, s)
+	}
+
+	return data, nil
+}
+
+func (sr *SqliteSchedulerRepository) ScheduleSave(s model.JoinedScheduler, timestamp, errors string) error {
+	query := `
+	insert into scheduler (user_id, resume_id, resume_title, timestamp, error)
+	values (?, ?, ?, ?, ?)
+	`
+
+	if _, err := sr.DB.Exec(query, s.UserID, s.ResumeID, s.ResumeTitle, timestamp, errors); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (tr *SqliteTokenRepository) TokenSave(ctx context.Context, token *model.Token, userID string) error {
+	query := `
+	insert into tokens (access_token, refresh_token, token_type, expiry, user_id)
+	values (?, ?, ?, ?, ?)
+	`
+
+	if _, err := tr.DB.Exec(query,
+		token.AccessToken,
+		token.RefreshToken,
+		token.TokenType,
+		token.Expiry.Unix(),
+		userID,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (sr *SqliteTokenRepository) TokenGetByUserID(ctx context.Context, userID string) (*model.Token, error) {
+	query := `select access_token, refresh_token, token_type, expiry from tokens where user_id = ?`
+
+	var t model.Token
+	var e int64
+	if err := sr.DB.QueryRow(query, userID).Scan(
+		&t.AccessToken,
+		&t.RefreshToken,
+		&t.TokenType,
+		&e,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, err
+		}
+		return nil, err
+	}
+
+	t.Expiry = time.Unix(e, 0)
+	return &t, nil
+}
+
+func (sr *SqliteTokenRepository) TokenUpdate(ctx context.Context, token *model.Token, userID string) error {
+	query := `
+	update tokens
+	set access_token = ?, refresh_token = ?, token_type = ?, expiry = ?
+	where user_id = ?
+	`
+
+	if _, err := sr.DB.Exec(
+		query,
+		token.AccessToken,
+		token.RefreshToken,
+		token.TokenType,
+		token.Expiry.Unix(),
+		userID,
+	); err != nil {
+		return err
+	}
 
 	return nil
 }

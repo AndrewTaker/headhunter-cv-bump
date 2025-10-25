@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 	"pkg/auth"
-	"pkg/model"
+	"pkg/headhunter"
 	"pkg/service"
 	"strconv"
 )
@@ -57,13 +57,13 @@ func (h *ProfileHandler) Profile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProfileHandler) GetResumes(w http.ResponseWriter, r *http.Request) {
-	var resumes []model.Resume
+	var resumes []headhunter.Resume
 
 	for i := range 10 {
 		s := strconv.Itoa(i)
-		resumes = append(resumes, model.Resume{
+		resumes = append(resumes, headhunter.Resume{
 			ID:           s,
-			AlternateUrl: fmt.Sprintf("https://localhost.com/api/%s", s),
+			AlternateURL: fmt.Sprintf("https://localhost.com/api/%s", s),
 			Title:        fmt.Sprintf("title for resumes %s", s),
 		})
 	}

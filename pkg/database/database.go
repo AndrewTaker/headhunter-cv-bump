@@ -41,7 +41,7 @@ var tables = `
 		token_type text,
 		expiry integer,
 		user_id text unique,
-		
+
 		foreign key (user_id) references users(id) on delete cascade
 	);
 
