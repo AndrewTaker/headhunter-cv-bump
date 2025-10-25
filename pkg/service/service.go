@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"pkg/model"
 	"pkg/repository"
+	"time"
 )
 
 type SqliteService struct {
@@ -63,20 +64,12 @@ func (rs *SqliteService) SaveResult(s model.JoinedScheduler, timestamp, errors s
 	return rs.repo.ScheduleSave(s, timestamp, errors)
 }
 
-func (rs *SqliteService) SaveToken(ctx context.Context, token *model.Token, userID string) error {
+func (rs *SqliteService) CreateOrUpdateToken(ctx context.Context, token *model.Token, userID string) error {
 	if err := token.Encrypt(); err != nil {
 		return err
 	}
 
-	return rs.repo.TokenSave(ctx, token, userID)
-}
-
-func (rs *SqliteService) UpdateToken(ctx context.Context, token *model.Token, userID string) error {
-	if err := token.Encrypt(); err != nil {
-		return err
-	}
-
-	return rs.repo.TokenUpdate(ctx, token, userID)
+	return rs.repo.TokenSaveOrCreate(ctx, token, userID)
 }
 
 func (rs *SqliteService) GetTokenByUserID(ctx context.Context, userID string) (*model.Token, error) {
@@ -105,4 +98,16 @@ func (rs *SqliteService) GetUser(id string) (*model.User, error) {
 
 func (rs *SqliteService) DeleteUser(id string) error {
 	return rs.repo.UserDeleteByID(id)
+}
+
+func (rs *SqliteService) SaveSession(ctx context.Context, sessID, userID string, expiresAt time.Time) error {
+	return rs.repo.SessionSave(ctx, sessID, userID, expiresAt)
+}
+
+func (rs *SqliteService) DeleteSession(ctx context.Context, sessID, userID string) error {
+	return rs.repo.SessionDelete(ctx, sessID, userID)
+}
+
+func (rs *SqliteService) GetUserBySession(ctx context.Context, sessID string) (*model.User, error) {
+	return rs.repo.UserGetBySessionID(ctx, sessID)
 }

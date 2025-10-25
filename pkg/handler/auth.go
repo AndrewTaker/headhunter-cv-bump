@@ -2,11 +2,11 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
-	"pkg/auth"
+	"os"
 	"pkg/headhunter"
 	"pkg/model"
 	"pkg/service"
@@ -22,64 +22,8 @@ type AuthHandler struct {
 	service *service.SqliteService
 }
 
-func NewAuthHandler(s *service.SqliteService, a *auth.AuthRepository) *AuthHandler {
+func NewAuthHandler(s *service.SqliteService) *AuthHandler {
 	return &AuthHandler{service: s}
-}
-
-func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
-	token, err := r.Cookie("sess")
-	if err != nil {
-		http.Error(w, "Could not retrieve cookie", http.StatusForbidden)
-		log.Println("cookie err", err)
-		return
-	}
-
-	if !h.auth.IsPresent(token.Value) {
-		http.Error(w, "Not authorized", http.StatusForbidden)
-		return
-	}
-
-	userID := h.auth.GetUserByToken(token.Value)
-	user, err := h.service.GetUser(userID)
-	if err != nil {
-		http.Error(w, "could not get user from db", http.StatusInternalServerError)
-		return
-	}
-
-	ur := struct {
-		ID         string `json:"id"`
-		FirstName  string `json:"first_name"`
-		LastName   string `json:"last_name"`
-		MiddleName string `json:"middle_name"`
-	}{
-		ID:         user.ID,
-		FirstName:  user.FirstName,
-		LastName:   user.LastName,
-		MiddleName: user.MiddleName,
-	}
-	data, _ := json.Marshal(ur)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
-}
-
-func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
-	token, err := r.Cookie("sess")
-	if err != nil {
-		http.Error(w, "Could not retrieve cookie", http.StatusBadRequest)
-		log.Println("cookie err", err)
-		return
-	}
-
-	h.auth.InvalidateToken(token.Value)
-	http.SetCookie(w, &http.Cookie{
-		Name:     "sess",
-		Value:    "",
-		MaxAge:   -1,
-		Path:     "/",
-		HttpOnly: true,
-	})
-
-	http.Redirect(w, r, "http://localhost:5173", http.StatusTemporaryRedirect)
 }
 
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +44,9 @@ func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	states[state] = struct{}{}
 	stateMutex.Unlock()
 
-	http.Redirect(w, r, headhunter.GetAuthCodeURL(state), http.StatusTemporaryRedirect)
+	u := headhunter.GenerateAuthUrl(state, os.Getenv("HH_CLIENT_ID"))
+
+	http.Redirect(w, r, u, http.StatusTemporaryRedirect)
 }
 
 func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
@@ -118,82 +64,77 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.Background()
-	token, err := headhunter.ExchangeCodeForToken(r.Context(), authCode)
+	client := headhunter.NewHHClient(ctx, nil, nil)
+	token, err := client.AuthExachangeCodeForToken(r.Context(), authCode)
 	if err != nil {
 		log.Printf("Token exchange failed: %v", err)
 		http.Error(w, "Could not exchange code for token: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	client.AT = &token.AccessToken
+	client.RT = &token.RefreshToken
 
-	client := headhunter.HHOauthConfig.Client(ctx, token)
-	resp, err := client.Get("https://api.hh.ru/me")
+	user, err := client.GetUser(ctx)
 	if err != nil {
 		log.Printf("Failed to fetch user info: %v", err)
 		http.Error(w, "Failed to fetch user data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Sprintf("HeadHunter API returned non-200 status: %d", resp.StatusCode), http.StatusInternalServerError)
-		return
-	}
-
-	var user headhunter.User
-	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		log.Printf("Failed to decode user info JSON: %v", err)
-		http.Error(w, "Failed to decode user data.", http.StatusInternalServerError)
-		return
-	}
-
-	if err := h.service.CreateOrUpdateUser(&model.User{ID: user.ID, FirstName: user.FirstName, LastName: user.LastName, MiddleName: user.MiddleName}); err != nil {
+	if err := h.service.CreateOrUpdateUser(&model.User{
+		ID:         user.ID,
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		MiddleName: user.MiddleName,
+	}); err != nil {
 		log.Printf("Failed to save user to database: %v", err)
 		http.Error(w, "Failed to save user to database", http.StatusInternalServerError)
 		return
 	}
 
-	dbToken := model.Token{
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		TokenType:    token.TokenType,
-		Expiry:       token.Expiry,
-	}
-
-	tokenInDB, err := h.service.GetTokenByUserID(r.Context(), user.ID)
-	if err != nil {
-		log.Printf("GetTokenByUserID: Failed to save token to database: %v", err)
-		http.Error(w, "Failed to save token to database", http.StatusInternalServerError)
-		return
-	}
-
-	// save if exists else update
-	if tokenInDB == nil {
-		if err := h.service.SaveToken(ctx, &dbToken, user.ID); err != nil {
-			log.Printf("SaveToken: Failed to save token to database: %v", err)
-			http.Error(w, "Failed to save token to database", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		if err := h.service.UpdateToken(ctx, &dbToken, user.ID); err != nil {
-			log.Printf("UpdateToken: Failed to save update token to database: %v", err)
-			http.Error(w, "Failed to update token to database", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	sessionToken, err := utils.GenerateRandomString(32)
-	if err != nil {
+	if err := h.service.CreateOrUpdateToken(
+		ctx,
+		&model.Token{AccessToken: token.AccessToken, RefreshToken: token.RefreshToken},
+		user.ID,
+	); err != nil {
 		log.Printf("failed to generate random string %v", err)
 		http.Error(w, "failed to generate random string", http.StatusInternalServerError)
 		return
 	}
 
-	h.auth.StoreToken(user.ID, sessionToken)
+	resumes, err := client.GetUserResumes(ctx)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+
+	var dbResumes []model.Resume
+	for _, resume := range resumes {
+		dbResumes = append(dbResumes, model.Resume{
+			ID:           resume.ID,
+			AlternateURL: resume.AlternateURL,
+			Title:        resume.Title,
+			CreatedAt:    model.HHTime(resume.CreatedAt),
+			UpdatedAt:    model.HHTime(resume.UpdatedAt),
+		})
+	}
+	if err := h.service.CreateOrUpdateResumes(dbResumes, user.ID); err != nil {
+		log.Println(err)
+		return
+	}
+
+	sessionToken, _ := utils.GenerateRandomString(32)
+	expiresAt := time.Now().Add(10 * time.Minute)
+
+	if err := h.service.SaveSession(ctx, sessionToken, user.ID, expiresAt); err != nil {
+		log.Printf("failed to save session to db %v", err)
+		return
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "sess",
 		Value:    sessionToken,
-		Expires:  time.Now().Add(60 * time.Minute),
+		Expires:  expiresAt,
 		Path:     "/",
 		HttpOnly: true,
 	})

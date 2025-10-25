@@ -41,11 +41,10 @@ func (hht HHTime) Value() (driver.Value, error) {
 
 type Resume struct {
 	ID           string
-	AlternateUrl string
+	AlternateURL string
 	Title        string
 	CreatedAt    HHTime
 	UpdatedAt    HHTime
-	AlternateURL string
 	IsScheduled  int
 }
 
