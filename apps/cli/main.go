@@ -2,9 +2,9 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
-	"pkg/auth"
 	"pkg/database"
 	"pkg/handler"
 	"pkg/repository"
@@ -16,12 +16,17 @@ import (
 )
 
 func main() {
-	log.Println("test")
+	slogHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+
+	slog.SetDefault(slog.New(slogHandler))
+
 	dbPath := os.Getenv("DB_PATH")
 
-	if err := os.Remove(dbPath); err != nil {
-		log.Fatal(err)
-	}
+	// if err := os.Remove(dbPath); err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	db, err := database.NewSqliteDatabase(dbPath)
 	if err != nil {
@@ -30,20 +35,17 @@ func main() {
 
 	repository := repository.NewSqliteRepository(db)
 	service := service.NewSqliteService(repository)
-	auth := auth.NewAuthRepository()
 
 	router := mux.NewRouter()
-	authHandler := handler.NewAuthHandler(service, auth)
-	profileHandler := handler.NewProfileHandler(service, auth)
+	authHandler := handler.NewAuthHandler(service)
+	profileHandler := handler.NewProfileHandler(service)
 
-	router.HandleFunc("/profile", profileHandler.Profile).Methods("GET")
-	router.HandleFunc("/me", authHandler.Me).Methods("GET")
+	router.HandleFunc("/me", profileHandler.Me).Methods("GET")
+	router.HandleFunc("/resumes", profileHandler.Resumes).Methods("GET")
 
 	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
-	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
+	// router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
 	router.HandleFunc("/auth/callback", authHandler.Callback).Methods("GET")
-
-	router.HandleFunc("/resumes", profileHandler.GetResumes).Methods("GET")
 
 	c := cors.New(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"},
@@ -53,8 +55,8 @@ func main() {
 		Debug:            false,
 	})
 	handlerWithCORS := c.Handler(router)
+	loggedMux := handler.LogRequestMiddleware(handlerWithCORS)
 
-	log.Println("starting server at 44444")
-	log.Println("login: ", "http://localhost:44444/auth/login")
-	log.Fatal(http.ListenAndServe(":44444", handlerWithCORS))
+	slog.Info("starting server at 44444")
+	log.Fatal(http.ListenAndServe(":44444", loggedMux))
 }

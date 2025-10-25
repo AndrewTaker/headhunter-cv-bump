@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrNotAuthorized = errors.New("not authorized")
+	ErrInternal      = errors.New("internal error occured")
 )
 
 type ErrorResponse struct {
@@ -21,6 +22,7 @@ type ResumeResponseSingle struct {
 	AlternateUrl string    `json:"alternate_url"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	IsScheduled  int       `json:"is_scheduled"`
 }
 
 type ResumeResponseMany struct {

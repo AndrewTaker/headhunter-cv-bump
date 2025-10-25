@@ -4,20 +4,26 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"pkg/database"
 	"pkg/model"
 	"time"
 )
 
 type SqliteRepository struct {
-	DB *database.DB
+	DB  *database.DB
+	log *slog.Logger
 }
 
 func NewSqliteRepository(db *database.DB) *SqliteRepository {
-	return &SqliteRepository{DB: db}
+	logger := slog.Default().With(slog.String("log_type", "database"))
+	return &SqliteRepository{DB: db, log: logger}
 }
 
 func (sr *SqliteRepository) ResumeCreateOrUpdateBatch(resumes []model.Resume, userID string) error {
+	const function = "ResumeCreateOrUpdateBatch"
+	log := sr.log.With("function", function)
+
 	query := `
 	insert into resumes (id, title, alternate_url, created_at, updated_at, user_id) values (?, ?, ?, ?, ?, ?)
 	on conflict(id) do update set
@@ -29,12 +35,14 @@ func (sr *SqliteRepository) ResumeCreateOrUpdateBatch(resumes []model.Resume, us
 	`
 	tx, err := sr.DB.Begin()
 	if err != nil {
+		log.Error("transaction error", "error", err)
 		return err
 	}
 	defer tx.Rollback()
 
 	stmt, err := tx.Prepare(query)
 	if err != nil {
+		log.Error("transaction error", "error", err)
 		return err
 	}
 	defer stmt.Close()
@@ -49,6 +57,7 @@ func (sr *SqliteRepository) ResumeCreateOrUpdateBatch(resumes []model.Resume, us
 			userID,
 		)
 		if err != nil {
+			log.Error("qquery exec error", "error", err)
 			return fmt.Errorf("failed to execute statement for resume ID %s: %w", resume.ID, err)
 		}
 	}
@@ -58,10 +67,14 @@ func (sr *SqliteRepository) ResumeCreateOrUpdateBatch(resumes []model.Resume, us
 }
 
 func (sr *SqliteRepository) ResumeGetByUserIDBatch(userID string) ([]model.Resume, error) {
+	const function = "ResumeGetByUserIDBatch"
+	log := sr.log.With("function", function)
+
 	query := "select id, title, alternate_url, created_at, updated_at, is_scheduled from resumes where user_id = ?"
 
 	rows, err := sr.DB.Query(query, userID)
 	if err != nil {
+		log.Error("query error", "error", err)
 		return nil, err
 	}
 
@@ -76,12 +89,14 @@ func (sr *SqliteRepository) ResumeGetByUserIDBatch(userID string) ([]model.Resum
 			&r.UpdatedAt,
 			&r.IsScheduled,
 		); err != nil {
+			log.Error("scan error", "error", err)
 			return nil, err
 		}
 		resumes = append(resumes, r)
 	}
 
 	if err = rows.Err(); err != nil {
+		log.Error("rows error", "error", err)
 		return []model.Resume{}, err
 	}
 
@@ -174,8 +189,11 @@ func (sr *SqliteRepository) UserCreateOrUpdate(user *model.User) error {
 }
 
 func (sr *SqliteRepository) UserGetBySessionID(ctx context.Context, sessID string) (*model.User, error) {
+	const function = "UserGetBySessionID"
+	log := sr.log.With("function", function)
+
 	query := `
-	select id, first_name, last_name, middle name from users
+	select id, first_name, last_name, middle_name from users
 	where id = (select user_id from session where id = ?)
 	`
 
@@ -185,8 +203,8 @@ func (sr *SqliteRepository) UserGetBySessionID(ctx context.Context, sessID strin
 		&u.FirstName,
 		&u.LastName,
 		&u.MiddleName,
-		&u.LastName,
 	); err != nil {
+		log.Error("scan error", "error", err)
 		return nil, err
 	}
 
