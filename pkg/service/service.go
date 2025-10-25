@@ -104,8 +104,8 @@ func (rs *SqliteService) SaveSession(ctx context.Context, sessID, userID string,
 	return rs.repo.SessionSave(ctx, sessID, userID, expiresAt)
 }
 
-func (rs *SqliteService) DeleteSession(ctx context.Context, sessID, userID string) error {
-	return rs.repo.SessionDelete(ctx, sessID, userID)
+func (rs *SqliteService) DeleteSession(ctx context.Context, sessID) error {
+	return rs.repo.SessionDelete(ctx, sessID)
 }
 
 func (rs *SqliteService) GetUserBySession(ctx context.Context, sessID string) (*model.User, error) {

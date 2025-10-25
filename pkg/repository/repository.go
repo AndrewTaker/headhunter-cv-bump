@@ -331,12 +331,10 @@ func (sr *SqliteRepository) SessionSave(ctx context.Context, sessID, userID stri
 	return nil
 }
 
-func (sr *SqliteRepository) SessionDelete(ctx context.Context, sessID, userID string) error {
-	query := `
-	delete from session where id = ? and user_id = ?
-	`
+func (sr *SqliteRepository) SessionDelete(ctx context.Context, sessID string) error {
+	query := `delete from session where id = ?`
 
-	if _, err := sr.DB.Exec(query, sessID, userID); err != nil {
+	if _, err := sr.DB.Exec(query, sessID); err != nil {
 		return err
 	}
 

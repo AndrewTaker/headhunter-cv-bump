@@ -26,6 +26,23 @@ func NewAuthHandler(s *service.SqliteService) *AuthHandler {
 	return &AuthHandler{service: s}
 }
 
+func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
+	sess, err := r.Cookie("sess")
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+
+	h.service.DeleteSession(r.Context(), sess.Value)
+	http.SetCookie(w, &http.Cookie{
+		Name:   "sess",
+		Value:  "",
+		MaxAge: -1,
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 	state, err := utils.GenerateRandomString(64)
 
