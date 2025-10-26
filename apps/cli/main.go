@@ -44,7 +44,7 @@ func main() {
 	router.HandleFunc("/resumes", profileHandler.Resumes).Methods("GET")
 
 	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
-	// router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
+	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
 	router.HandleFunc("/auth/callback", authHandler.Callback).Methods("GET")
 
 	c := cors.New(cors.Options{

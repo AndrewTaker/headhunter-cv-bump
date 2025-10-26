@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -27,20 +26,20 @@ func NewAuthHandler(s *service.SqliteService) *AuthHandler {
 }
 
 func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
-	sess, err := r.Cookie("sess")
-	if err != nil {
-		slog.Error(err.Error())
-		return
-	}
+	// sess, err := r.Cookie("sess")
+	// if err == nil {
+	// 	_ = h.service.DeleteSession(r.Context(), sess.Value)
+	// }
 
-	h.service.DeleteSession(r.Context(), sess.Value)
 	http.SetCookie(w, &http.Cookie{
 		Name:   "sess",
 		Value:  "",
 		MaxAge: -1,
+		Path:   "/",
 	})
 
-	w.WriteHeader(http.StatusNoContent)
+	// w.WriteHeader(http.StatusNoContent)
+	http.Redirect(w, r, "http://localhost:5173", http.StatusNoContent)
 }
 
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
@@ -50,6 +49,7 @@ func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
 		Name:   "sess",
 		Value:  "",
 		MaxAge: -1,
+		Path:   "/",
 	})
 
 	if err != nil {
@@ -71,12 +71,12 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	authCode := r.URL.Query().Get("code")
 
 	if errorMsg := r.URL.Query().Get("error"); errorMsg != "" {
-		http.Error(w, fmt.Sprintf("Authorization failed: %s", errorMsg), http.StatusForbidden)
+		JsonResponseErr(w, r, http.StatusForbidden, ErrNotAuthorized.Error())
 		return
 	}
 
 	if !validateStateToken(queryState) {
-		http.Error(w, "Invalid or missing state parameter. Potential CSRF.", http.StatusForbidden)
+		JsonResponseErr(w, r, http.StatusForbidden, ErrNotAuthorized.Error())
 		return
 	}
 
@@ -84,8 +84,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	client := headhunter.NewHHClient(ctx, nil, nil)
 	token, err := client.AuthExachangeCodeForToken(r.Context(), authCode)
 	if err != nil {
-		log.Printf("Token exchange failed: %v", err)
-		http.Error(w, "Could not exchange code for token: "+err.Error(), http.StatusInternalServerError)
+		JsonResponseErr(w, r, http.StatusForbidden, ErrNotAuthorized.Error())
 		return
 	}
 	client.AT = &token.AccessToken
@@ -93,8 +92,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	user, err := client.GetUser(ctx)
 	if err != nil {
-		log.Printf("Failed to fetch user info: %v", err)
-		http.Error(w, "Failed to fetch user data: "+err.Error(), http.StatusInternalServerError)
+		JsonResponseErr(w, r, http.StatusForbidden, ErrInternal.Error())
 		return
 	}
 
@@ -151,7 +149,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "sess",
 		Value:    sessionToken,
-		Expires:  expiresAt,
+		MaxAge:   int(expiresAt.Unix()),
 		Path:     "/",
 		HttpOnly: true,
 	})
@@ -170,3 +168,5 @@ func validateStateToken(state string) bool {
 	delete(states, state)
 	return true
 }
+
+func validateSesssionOrCleanUp(w http.ResponseWriter) {}

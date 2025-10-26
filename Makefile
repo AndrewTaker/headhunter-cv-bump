@@ -3,20 +3,18 @@ ifneq (,$(wildcard .env))
     export $(shell sed 's/=.*//' .env)
 endif
 
-.PHONY: all web scheduler
+.PHONY: all web scheduler cli
 
-all: web scheduler
+all: web scheduler cli
 
 web:
 	@echo "Building web..."
-	cd apps/web && go build -o bin/hhcv .
+	cd apps/web && go build -o bin/web .
 
 scheduler:
 	@echo "Building scheduler..."
-	cd apps/scheduler && go build -o bin/hhcv-scheduler .
+	cd apps/scheduler && go build -o bin/scheduler .
 
-run-web:
-	@echo "Building web..."
-	cd apps/web && go build -o bin/hhcv .
-	@echo "Starting web..."
-	./web/bin/hhcv http localhost 44444 true
+cli:
+	@echo "Building cli..."
+	cd apps/cli && go build -o bin/cli .

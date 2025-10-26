@@ -6,6 +6,6 @@ insert_final_newline = true
 charset = utf-8
 trim_trailing_whitespace = true
 
-[*.{js,css,html,py,vue}]
+[*.{js,css,html,py,vue,json,ts}]
 indent_style = space
 indent_size = 4

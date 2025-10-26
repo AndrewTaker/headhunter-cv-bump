@@ -4,10 +4,10 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = ";export $(grep -v '^#' .env | xargs); ./apps/cli/bin/cli"
-  cmd = "go build -o ./apps/cli/bin/cli ./apps/cli/"
+  bin = "./apps/cli/bin/cli"
+  cmd = "make cli"
   delay = 1000
-  exclude_dir = ["assets", "tmp", "vendor", "testdata", "ui"]
+  exclude_dir = ["assets", "tmp", "vendor", "testdata", "ui", "scripts"]
   exclude_file = []
   exclude_regex = ["_test.go"]
   exclude_unchanged = false
