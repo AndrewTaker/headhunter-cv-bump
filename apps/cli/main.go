@@ -21,6 +21,11 @@ func main() {
 	})
 
 	slog.SetDefault(slog.New(slogHandler))
+	slog.Info("CLLLLLLIENT",
+		"HH_CLIENT_ID", os.Getenv("HH_CLIENT_ID"),
+		"HH_CLIENT_SECRET", os.Getenv("HH_CLIENT_SECRET"),
+		"HH_REDIRECT_URL", os.Getenv("HH_REDIRECT_URL"),
+	)
 
 	dbPath := os.Getenv("DB_PATH")
 
@@ -47,8 +52,11 @@ func main() {
 	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
 	router.HandleFunc("/auth/callback", authHandler.Callback).Methods("GET")
 
+	fileServer := http.FileServer(http.Dir("frontend"))
+	router.PathPrefix("/").Handler(fileServer)
+
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{"http://localhost:44444"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
