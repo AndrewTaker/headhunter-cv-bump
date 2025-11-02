@@ -26,11 +26,6 @@ func NewAuthHandler(s *service.SqliteService) *AuthHandler {
 }
 
 func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
-	// sess, err := r.Cookie("sess")
-	// if err == nil {
-	// 	_ = h.service.DeleteSession(r.Context(), sess.Value)
-	// }
-
 	http.SetCookie(w, &http.Cookie{
 		Name:   "sess",
 		Value:  "",
@@ -38,8 +33,7 @@ func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 		Path:   "/",
 	})
 
-	// w.WriteHeader(http.StatusNoContent)
-	http.Redirect(w, r, "http://localhost:5173", http.StatusNoContent)
+	http.Redirect(w, r, "http://localhost:44444", http.StatusSeeOther)
 }
 
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +148,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	http.Redirect(w, r, "http://localhost:5173", http.StatusTemporaryRedirect)
+	http.Redirect(w, r, os.Getenv("HH_REDIRECT_URL"), http.StatusTemporaryRedirect)
 }
 
 func validateStateToken(state string) bool {
