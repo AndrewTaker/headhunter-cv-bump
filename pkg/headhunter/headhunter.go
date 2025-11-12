@@ -170,3 +170,96 @@ func (hh *HHClient) AuthExachangeCodeForToken(ctx context.Context, code string) 
 
 	return &t, nil
 }
+
+func (hh *HHClient) RefreshToken(ctx context.Context) (*Token, error) {
+	const path = "/token"
+	const method = http.MethodPost
+
+	log := hh.log.With(
+		slog.String("target_path", path),
+		slog.String("method", method),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, hh.baseURL+path, nil)
+	if err != nil {
+		log.Error("failed request creation", "error", err)
+		return nil, err
+	}
+
+	req.Header.Set("HH-User-Agent", os.Getenv("HH_USER_AGENT"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	q := req.URL.Query()
+	q.Add("refresh_token", *hh.RT)
+	q.Add("grant_type", "refresh_token")
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := hh.client.Do(req)
+	if err != nil {
+		body, _ := io.ReadAll(resp.Body)
+		log.Error("failed response",
+			"error", err,
+			slog.String("body", string(body)),
+		)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Error("bad status code",
+			"error", err,
+			slog.String("body", string(body)),
+		)
+		return nil, fmt.Errorf("hh.RefreshToken: bad status code %d %s", resp.StatusCode, string(body))
+	}
+
+	var t Token
+	if err = json.NewDecoder(resp.Body).Decode(&t); err != nil {
+		log.Error("json decoding error", "error", err)
+		return nil, err
+	}
+
+	return &t, nil
+}
+
+func (hh *HHClient) BumpResume(ctx context.Context, id string) error {
+	var path string = fmt.Sprintf("/resumes/%s/publish", id)
+	const method = http.MethodPost
+
+	log := hh.log.With(
+		slog.String("target_path", path),
+		slog.String("method", method),
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, hh.baseURL+path, nil)
+	if err != nil {
+		log.Error("failed request creation", "error", err)
+		return err
+	}
+
+	req.Header.Set("HH-User-Agent", os.Getenv("HH_USER_AGENT"))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", *hh.AT))
+
+	resp, err := hh.client.Do(req)
+	if err != nil {
+		body, _ := io.ReadAll(resp.Body)
+		log.Error("failed response",
+			"error", err,
+			slog.String("body", string(body)),
+		)
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Error("bad status code",
+			"error", err,
+			slog.String("body", string(body)),
+		)
+		return fmt.Errorf("hh.BumpResume: bad status code %d %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}

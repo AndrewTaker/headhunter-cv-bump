@@ -11,7 +11,7 @@ function logout() {
 async function loadPage() {
     const user = await genericFetch("GET", "/me")
     if (user) {
-        fillAuthSection(true)
+        fillAuthSection(true, user)
         fillUserSection(user)
 
         const resumes = await genericFetch("GET", "/resumes")
@@ -21,20 +21,27 @@ async function loadPage() {
     }
 }
 
-function fillAuthSection(isLoggedIn) {
-    const auth = document.getElementById("auth")
-    const button = document.createElement("a")
-    button.role = "button"
+function fillAuthSection(isLoggedIn, user = null) {
+    const loginUrl = `${BASE_URL}/auth/login`
+    const logoutUrl = `${BASE_URL}/auth/logout`
+
+    const nav = document.getElementById("navigation")
+    const identity = document.createElement("ul")
+    const links = document.createElement("ul")
+    const auth = document.createElement("a")
+
+    const linksItems = []
 
     if (isLoggedIn) {
-        button.href = `${BASE_URL}/auth/logout`
-        button.textContent = "logout"
+        auth.href = logoutUrl
+        auth.textContent = "Выйти"
     } else {
-        button.href = `${BASE_URL}/auth/login`
-        button.textContent = "login"
+        auth.href = loginUrl
+        auth.textContent = "Войти"
     }
 
-    auth.appendChild(button)
+    linksItems.push(auth)
+    links.append(linksItems)
 }
 
 function fillUserSection(user) {
@@ -57,9 +64,9 @@ function fillUserSection(user) {
 }
 
 function fillResumesSection(resumes) {
-    if (resumes) {
-        const resumeSection = document.getElementById("resumes")
+    const resumeSection = document.getElementById("resumes")
 
+    if (resumes) {
         resumes.forEach((resume) => {
             const article = document.createElement("article")
 
@@ -71,9 +78,15 @@ function fillResumesSection(resumes) {
             const footer = document.createElement("div")
             const ca = document.createElement("p")
             const ua = document.createElement("p")
+            const scheduled = document.createElement("p")
 
             heading.textContent = resume.title
             small.textContent = resume.id
+
+            const setUpScheduleAnchor = document.createElement("a")
+            setUpScheduleAnchor.href = `${BASE_URL}/resumes/${resume.id}/toggle`
+            setUpScheduleAnchor.textContent = "toggle"
+            scheduled.textContent = resume.is_scheduled == 0 ? "Не стоит в очереди" : "Стоит в очереди"
 
             const createdAt = new Date(resume.created_at)
             const updatedAt = new Date(resume.updated_at)
@@ -93,11 +106,19 @@ function fillResumesSection(resumes) {
             header.appendChild(hgroup)
             footer.appendChild(ca)
             footer.appendChild(ua)
+            footer.appendChild(scheduled)
+            footer.appendChild(setUpScheduleAnchor)
             article.appendChild(header)
             article.appendChild(footer)
 
             resumeSection.appendChild(article)
         })
+    } else {
+        const p = document.createElement("p")
+        p.textContent = "В базе нет резюме"
+        const a = document.createElement("a")
+        a.href =
+            resumeSection.appendChild(p)
     }
 }
 

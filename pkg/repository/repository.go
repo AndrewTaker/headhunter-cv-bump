@@ -127,15 +127,18 @@ func (sr *SqliteRepository) ResumeGetByID(resumeID, userID string) (*model.Resum
 	return &r, nil
 }
 
-func (sr *SqliteRepository) ResumeToggleScheduling(resumeID, userID string, isScheduled bool) error {
-	scheduledValue := 0
-	if isScheduled {
-		scheduledValue = 1
+func (sr *SqliteRepository) ResumeToggleScheduling(resumeID, userID string, isScheduled int) error {
+	var toggleTo int
+
+	if isScheduled == 0 {
+		toggleTo = 1
+	} else {
+		toggleTo = 0
 	}
 
 	query := `update resumes set is_scheduled = ? where id = ? and user_id = ?`
 
-	if _, err := sr.DB.Exec(query, scheduledValue, resumeID, userID); err != nil {
+	if _, err := sr.DB.Exec(query, toggleTo, resumeID, userID); err != nil {
 		return err
 	}
 

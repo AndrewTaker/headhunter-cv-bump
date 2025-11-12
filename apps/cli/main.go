@@ -47,6 +47,7 @@ func main() {
 
 	router.HandleFunc("/me", profileHandler.Me).Methods("GET")
 	router.HandleFunc("/resumes", profileHandler.Resumes).Methods("GET")
+	router.HandleFunc("resumes/{resume_id}/toggle", profileHandler.ToggleResume).Methods("POST")
 
 	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
 	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")

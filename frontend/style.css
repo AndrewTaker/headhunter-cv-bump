@@ -1,0 +1,61 @@
+#resumes .grid {
+    /* Slightly wider column gap */
+    gap: 1.5rem;
+}
+
+/* 2. Target the Resume Card (<article>) */
+#resumes article {
+    /* Use a slightly darker background for better contrast against the page */
+    background-color: var(--pico-card-background-color);
+
+    /* Subtle shadow to make it lift off the page */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+
+    /* Slightly rounded corners (Pico already handles some) */
+    border-radius: var(--pico-border-radius);
+
+    /* Ensure the content is nicely padded */
+    padding: var(--pico-spacing);
+}
+
+/* 3. Improve Header and Title Visuals */
+#resumes article header {
+    /* Add a solid bottom line to separate the header from the content */
+    border-bottom: 1px solid var(--pico-form-element-border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+#resumes article h3 {
+    /* Make the title slightly smaller and bolder for better hierarchy */
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+#resumes article p small {
+    /* De-emphasize the ID for better readability */
+    color: var(--pico-secondary);
+    font-size: 0.85rem;
+}
+
+/* 4. Tidy up the Footer/Metadata Section */
+#resumes article footer {
+    /* Separate metadata from actions */
+    border-top: 1px solid var(--pico-form-element-border-color);
+    padding-top: 1rem;
+    margin-top: 1rem;
+
+    /* Ensure the action button is aligned nicely */
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Style for the Schedule Status line */
+#resumes article strong {
+    /* Make the status stand out */
+    color: var(--pico-primary);
+    display: block; /* Make it take its own line for better separation */
+    margin-bottom: 0.5rem;
+}

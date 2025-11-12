@@ -28,7 +28,7 @@ func (rs *SqliteService) GetUserResume(resumeID, userID string) (*model.Resume, 
 	return rs.repo.ResumeGetByID(resumeID, userID)
 }
 
-func (rs *SqliteService) ToggleResumeScheduling(resumeID, userID string, isScheduled bool) error {
+func (rs *SqliteService) ToggleResumeScheduling(resumeID, userID string, isScheduled int) error {
 	return rs.repo.ResumeToggleScheduling(resumeID, userID, isScheduled)
 }
 
