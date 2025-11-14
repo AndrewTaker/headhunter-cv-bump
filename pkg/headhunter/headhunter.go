@@ -3,12 +3,18 @@ package headhunter
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
+)
+
+var (
+	ErrUnauthorized   = errors.New("Unauthorized")
+	ErrHHTokenExpired = errors.New("token_expired")
 )
 
 type HHClient struct {
@@ -102,7 +108,22 @@ func (hh *HHClient) GetUser(ctx context.Context) (*User, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode == http.StatusForbidden {
+		var e AuthError
+		if err := json.NewDecoder(resp.Body).Decode(&e); err != nil {
+			log.Error("unauth error", "decoded err", err)
+			return nil, ErrUnauthorized
+		}
+
+		for _, hhe := range e.Errors {
+			if *hhe.Value == "token_expired" {
+				return nil, ErrHHTokenExpired
+			}
+		}
+		return nil, ErrUnauthorized
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		body, _ := io.ReadAll(resp.Body)
 		log.Error("bad status code", slog.String("body", string(body)))
 		return nil, fmt.Errorf("hh.GetUser: bad status code %d", resp.StatusCode)
@@ -252,13 +273,28 @@ func (hh *HHClient) BumpResume(ctx context.Context, id string) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusForbidden {
+		var e AuthError
+		if err := json.NewDecoder(resp.Body).Decode(&e); err != nil {
+			log.Error("unauth error", "decoded err", err)
+			return ErrUnauthorized
+		}
+
+		for _, hhe := range e.Errors {
+			if *hhe.Value == "token_expired" {
+				return ErrHHTokenExpired
+			}
+		}
+		return ErrUnauthorized
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		log.Error("bad status code",
 			"error", err,
 			slog.String("body", string(body)),
 		)
-		return fmt.Errorf("hh.BumpResume: bad status code %d %s", resp.StatusCode, string(body))
+		return fmt.Errorf("hh.BumpResume: bad status code %d %v", resp.StatusCode, err)
 	}
 
 	return nil

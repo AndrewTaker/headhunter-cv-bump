@@ -143,7 +143,6 @@ func (sr *SqliteRepository) ResumeToggleScheduling(resumeID, userID string, isSc
 	}
 
 	return nil
-
 }
 
 func (sr *SqliteRepository) ResumeDeleteByUserID(resumes []model.Resume, userID string) error {

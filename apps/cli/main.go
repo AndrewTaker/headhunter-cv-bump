@@ -47,7 +47,7 @@ func main() {
 
 	router.HandleFunc("/me", profileHandler.Me).Methods("GET")
 	router.HandleFunc("/resumes", profileHandler.Resumes).Methods("GET")
-	router.HandleFunc("resumes/{resume_id}/toggle", profileHandler.ToggleResume).Methods("POST")
+	router.HandleFunc("/resumes/{resume_id}/toggle", profileHandler.ToggleResume).Methods("POST")
 
 	router.HandleFunc("/auth/login", authHandler.LogIn).Methods("GET")
 	router.HandleFunc("/auth/logout", authHandler.LogOut).Methods("GET")
@@ -57,7 +57,7 @@ func main() {
 	router.PathPrefix("/").Handler(fileServer)
 
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:44444"},
+		AllowedOrigins:   []string{"http://localhost:44444", "http://localhost:5173"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,

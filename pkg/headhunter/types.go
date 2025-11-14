@@ -49,3 +49,13 @@ type Token struct {
 	ExpiresIn    int    `json:"expires_in"`
 	TokenType    string `json:"token_type"`
 }
+
+type AuthError struct {
+	RequestID   string  `json:"request_id"`
+	Description *string `json:"description"`
+	Errors      []struct {
+		Type  string  `json:"type"`
+		Value *string `json:"value"`
+	} `json:"errors"`
+	OauthError *string `json:"oauth_error"`
+}

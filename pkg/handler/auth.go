@@ -33,7 +33,7 @@ func (h *AuthHandler) LogOut(w http.ResponseWriter, r *http.Request) {
 		Path:   "/",
 	})
 
-	http.Redirect(w, r, "http://localhost:44444", http.StatusSeeOther)
+	http.Redirect(w, r, os.Getenv("HH_REDIRECT_URL"), http.StatusSeeOther)
 }
 
 func (h *AuthHandler) LogIn(w http.ResponseWriter, r *http.Request) {

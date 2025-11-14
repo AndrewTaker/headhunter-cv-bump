@@ -5,14 +5,18 @@ import (
 	"net/http"
 	"pkg/service"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type ProfileHandler struct {
 	service *service.SqliteService
+	log     *slog.Logger
 }
 
 func NewProfileHandler(s *service.SqliteService) *ProfileHandler {
-	return &ProfileHandler{service: s}
+	logger := slog.Default().With(slog.String("log_type", "hhclient"))
+	return &ProfileHandler{service: s, log: logger}
 }
 
 func (h *ProfileHandler) Me(w http.ResponseWriter, r *http.Request) {
@@ -49,18 +53,23 @@ func (h *ProfileHandler) ToggleResume(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.service.GetUserBySession(r.Context(), token.Value)
 	if err != nil {
+		slog.Error(err.Error())
 		JsonResponseErr(w, r, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 
-	resumeID := r.PathValue("resume_id")
+	vars := mux.Vars(r)
+	resumeID := vars["resume_id"]
+	slog.Info("RESUME_ID", "ID", resumeID)
 	resume, err := h.service.GetUserResume(resumeID, user.ID)
 	if err != nil {
+		slog.Error(err.Error())
 		JsonResponseErr(w, r, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
 
 	if err := h.service.ToggleResumeScheduling(resumeID, user.ID, resume.IsScheduled); err != nil {
+		slog.Error(err.Error())
 		JsonResponseErr(w, r, http.StatusInternalServerError, ErrInternal.Error())
 		return
 	}
