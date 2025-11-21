@@ -46,6 +46,7 @@ func main() {
 	profileHandler := handler.NewProfileHandler(service)
 
 	router.HandleFunc("/me", profileHandler.Me).Methods("GET")
+	router.HandleFunc("/cleanup", profileHandler.DeleteUserData).Methods("DELETE")
 	router.HandleFunc("/resumes", profileHandler.Resumes).Methods("GET")
 	router.HandleFunc("/resumes/{resume_id}/toggle", profileHandler.ToggleResume).Methods("POST")
 
