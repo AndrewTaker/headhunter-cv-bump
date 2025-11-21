@@ -29,7 +29,7 @@ function formatDateTime(iso: string) {
         <p>Обновлено: {formatDateTime(r.updated_at)}</p>
         <footer>
             <button on:click={() => toggle(r.id)}>
-                {#if r.is_scheduled === 1} Поставить в очередь {:else} Убрать из очереди {/if}
+                {#if r.is_scheduled === 0} Поставить в очередь {:else} Убрать из очереди {/if}
             </button>
         </footer>
     </article>

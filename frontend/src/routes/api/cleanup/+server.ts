@@ -1,13 +1,11 @@
+// src/routes/api/cleanup/+server.ts
 import type { RequestHandler } from './$types';
 import { backendFetch } from '$lib/server/backend';
 
-export const POST: RequestHandler = async (event) => {
-    const resume_id = event.params.resume_id;
-    const res = await backendFetch(event, `/resumes/${encodeURIComponent(resume_id)}/toggle`, {
-        method: 'POST',
-    });
+export const DELETE: RequestHandler = async (event) => {
+    const res = await backendFetch(event, '/cleanup', { method: 'DELETE' });
+
     const body = await res.arrayBuffer();
-    location.reload();
     return new Response(body, {
         status: res.status,
         headers: pickResponseHeaders(res.headers)
@@ -16,8 +14,8 @@ export const POST: RequestHandler = async (event) => {
 
 function pickResponseHeaders(h: Headers) {
     const out = new Headers();
-    const contentType = h.get('content-type');
-    if (contentType) out.set('content-type', contentType);
+    const ct = h.get('content-type');
+    if (ct) out.set('content-type', ct);
     return out;
 }
 
