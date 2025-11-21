@@ -19,6 +19,27 @@ func NewProfileHandler(s *service.SqliteService) *ProfileHandler {
 	return &ProfileHandler{service: s, log: logger}
 }
 
+func (h *ProfileHandler) DeleteUserData(w http.ResponseWriter, r *http.Request) {
+	token, err := r.Cookie("sess")
+	if err != nil {
+		JsonResponseErr(w, r, http.StatusForbidden, ErrNotAuthorized.Error())
+		return
+	}
+
+	user, err := h.service.GetUserBySession(r.Context(), token.Value)
+	if err != nil {
+		JsonResponseErr(w, r, http.StatusInternalServerError, ErrInternal.Error())
+		return
+	}
+
+	if err := h.service.DeleteUser(user.ID); err != nil {
+		JsonResponseErr(w, r, http.StatusInternalServerError, ErrInternal.Error())
+		return
+	}
+
+	JsonResponse(w, r, http.StatusOK, struct{}{})
+}
+
 func (h *ProfileHandler) Me(w http.ResponseWriter, r *http.Request) {
 	token, err := r.Cookie("sess")
 	if err != nil {

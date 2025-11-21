@@ -143,7 +143,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "sess",
 		Value:    sessionToken,
-		MaxAge:   int(expiresAt.Unix()),
+		MaxAge:   300,
 		Path:     "/",
 		HttpOnly: true,
 	})

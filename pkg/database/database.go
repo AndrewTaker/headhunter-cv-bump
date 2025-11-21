@@ -2,6 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"log/slog"
+	"net/url"
 )
 
 type DB struct {
@@ -9,15 +11,19 @@ type DB struct {
 }
 
 func NewSqliteDatabase(path string) (*DB, error) {
-	db, err := sql.Open("sqlite3", path)
+	params := url.Values{}
+	params.Add("_fk", "on")
+	dsn := "file:" + url.PathEscape(path) + "?" + params.Encode()
+
+	db, err := sql.Open("sqlite3", dsn)
+	slog.Info(dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.Exec("PRAGMA foreign_keys = ON")
-	if err != nil {
-		return nil, err
-	}
+	var fk string
+	_ = db.QueryRow("pragma foreign_keys").Scan(&fk)
+	slog.Info(fk)
 
 	_, err = db.Exec(tables)
 	if err != nil {
@@ -33,14 +39,14 @@ var tables = `
 		first_name text,
 		last_name text,
 		middle_name text
-	);
+	) without rowid;
 
 	create table if not exists tokens (
 		access_token text,
 		refresh_token text,
 		token_type text,
 		expiry integer,
-		user_id text unique,
+		user_id text unique not null,
 
 		foreign key (user_id) references users(id) on delete cascade
 	);
@@ -52,7 +58,7 @@ var tables = `
 		created_at text,
 		updated_at text,
 		is_scheduled integer not null default 0,
-		user_id text,
+		user_id text not null,
 
 		foreign key (user_id) references users(id) on delete cascade
 	);
@@ -68,7 +74,7 @@ var tables = `
 	create table if not exists session (
 		id text,
 		expires_at text,
-		user_id text,
+		user_id text not null,
 
 		foreign key (user_id) references users(id) on delete cascade
 	);

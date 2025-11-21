@@ -4,7 +4,7 @@ tmp_dir = "tmp"
 
 [build]
   args_bin = []
-  bin = "./apps/cli/bin/cli"
+  bin = ";export $(grep -v '^#' .env | xargs); ./apps/cli/bin/cli"
   cmd = "make cli"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata", "ui", "scripts"]
