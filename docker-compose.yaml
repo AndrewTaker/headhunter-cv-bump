@@ -1,0 +1,36 @@
+name: hhcv
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    volumes:
+      - cvu_hh_db:/data
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - appnet
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        API_URL: http://backend:8080
+    env_file: ./frontend/.env
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - appnet
+
+volumes:
+  cvu_hh_db:
+
+networks:
+  appnet:
+    driver: bridge
+

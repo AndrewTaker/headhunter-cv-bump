@@ -5,8 +5,7 @@ export const GET: RequestHandler = async () => {
     return new Response(null, {
         status: 302,
         headers: {
-            location: `${BACKEND_ORIGIN}/auth/login`
-        }
+            location: "http://localhost:8080/auth/login",
+        },
     });
 };
-

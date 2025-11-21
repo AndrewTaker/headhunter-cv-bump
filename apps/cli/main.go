@@ -67,6 +67,6 @@ func main() {
 	handlerWithCORS := c.Handler(router)
 	loggedMux := handler.LogRequestMiddleware(handlerWithCORS)
 
-	slog.Info("starting server at 44444")
-	log.Fatal(http.ListenAndServe(":44444", loggedMux))
+	slog.Info("starting server at 8080")
+	log.Fatal(http.ListenAndServe(":8080", loggedMux))
 }

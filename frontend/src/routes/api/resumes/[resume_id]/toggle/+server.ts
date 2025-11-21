@@ -6,12 +6,8 @@ export const POST: RequestHandler = async (event) => {
     const res = await backendFetch(event, `/resumes/${encodeURIComponent(resume_id)}/toggle`, {
         method: 'POST',
     });
-    const body = await res.arrayBuffer();
-    location.reload();
-    return new Response(body, {
-        status: res.status,
-        headers: pickResponseHeaders(res.headers)
-    });
+    const referer = event.request.headers.get('referer') || '/';
+    return Response.redirect(referer, 303);
 };
 
 function pickResponseHeaders(h: Headers) {
